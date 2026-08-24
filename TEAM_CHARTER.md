@@ -4,8 +4,10 @@ Integration/QA: Simon Ndeithi
 Backend Dev: Colin Akandinda
 Docs/DevOps Lead: Carnell Ngure 224641
 
-Downstream partner: Team 9
-Upstream partner: Team 7
+Link to repository: https://github.com/jkimanii/team8-webapp 
+
+Downstream partner (creating for): Team 9
+Upstream partner (consuming from): Team 7
 
 One paragraph description: The app is a Strathmore-centred online marketplace/e-commerce site where users (mainly Strathmore students) can list their items and sell and buy from each other
 

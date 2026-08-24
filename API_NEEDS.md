@@ -1,0 +1,7 @@
+Group 9 needs to access a student's basic profile (full name, student email, and active account status) to authenticate students and prevent unauthorized bookings. This must be done in real time oon every login. There's a low volume as it is only once per session. They need authentication as this is very sensitive data.
+
+Group 9 needs to read a students's verified contact email in order to dispatch appointment confirmations and reminders. This needs to be done in real time has a moderate volume as it's triggered automatically and requires high authentication
+
+Group 9 needs to read platform-level administrative role flags in order to allow authorized faculty/staff administrators to access system-wide analytics while strictly blocking student access. This needs to be real time, low volume and  very critical authentication
+
+What came as a shock to us most was how tricky it was to define a clear,practical way to bridge the two apps between a student-centric marketplace and a sensitive, confidential student mental health booking system. At first, it was hard to see how our two apps could connect without putting student privacy at risk. We quickly realized the integration didn't need to touch sensitive mental health data at all—our club app simply needed to provide basic read-only info like verifying student identities, checking roles, and avoiding schedule clashes during bookings.
