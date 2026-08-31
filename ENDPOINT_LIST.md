@@ -1,0 +1,7 @@
+| Method | Path | Purpose | Maps to Need |
+|---|---|---|---|
+| GET | `/students?email={email}` | Look up a student's account by their email address during login, before the caller has the internal student ID | "Group 9 needs to access a student's basic profile (full name, student email, and active account status) to authenticate students and prevent unauthorized bookings." |
+| GET | `/students/{id}` | Return a student's basic profile: full name, student email, active account status | "Group 9 needs to access a student's basic profile ... to authenticate students and prevent unauthorized bookings." |
+| POST | `/sessions` | Create an authenticated session for a student after their login credentials are verified; returns a session token, once per login | "Group 9 needs to access a student's basic profile ... to authenticate students ... This must be done in real time on every login." |
+| GET | `/students/{id}/contact` | Return a student's verified contact email, used to dispatch appointment confirmations and reminders | "Group 9 needs to read a student's verified contact email to dispatch appointment confirmations and reminders." |
+| GET | `/users/{id}/role` | Return a user's platform-level administrative role flag, used to grant faculty/staff admins access to system-wide analytics while blocking students | "Group 9 needs to read platform-level administrative role flags ... while strictly blocking student access." |
