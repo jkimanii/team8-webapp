@@ -1,0 +1,227 @@
+openapi: 3.0.3
+info:
+  title: StrathShop API
+  description: >
+    API exposed by Group 8 to Group 9. This contract covers
+    read access to Listings and Categories, plus one scoped write
+    endpoint for updating a listing's availability status after a
+    booking action on their side. No student, session, or user account
+    data is exposed.
+  version: 2.1.0
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local development server
+
+paths:
+  /listings:
+    get:
+      summary: Return marketplace listings filtered by category, used to surface wellness items or counseling services
+      parameters:
+        - name: category
+          in: query
+          required: true
+          description: Which listing category to return
+          schema:
+            type: string
+            enum: [wellness, counseling]
+            example: wellness
+      responses:
+        '200':
+          description: Listings matching the given category
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  oneOf:
+                    - $ref: '#/components/schemas/WellnessListing'
+                    - $ref: '#/components/schemas/CounselingListing'
+        '400':
+          description: category is missing or not one of the allowed values
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /listings/{id}:
+    get:
+      summary: Return full details for a single listing, used to check current price/stock/availability before recommending it
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The listing's internal ID
+          schema:
+            type: integer
+            example: 14
+      responses:
+        '200':
+          description: Listing found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/WellnessListing'
+                  - $ref: '#/components/schemas/CounselingListing'
+        '404':
+          description: No listing found with that ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /listings/{id}/availability:
+    patch:
+      summary: Update a listing's availability status, used when a booking action in Strathmore Mental Health App's system consumes it (e.g. a doctor accepting an appointment)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The listing's internal ID
+          schema:
+            type: integer
+            example: 21
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Availability'
+      responses:
+        '200':
+          description: Availability status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Availability'
+        '400':
+          description: status is missing or not one of the allowed values
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No listing found with that ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /categories:
+    get:
+      summary: Return the list of available marketplace categories
+      responses:
+        '200':
+          description: All available categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+  /categories/{id}:
+    get:
+      summary: Return a single category's details by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The category's internal ID
+          schema:
+            type: integer
+            example: 7
+      responses:
+        '200':
+          description: Category found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '404':
+          description: No category found with that ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    WellnessListing:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 14
+        title:
+          type: string
+          example: 'Ibuprofen 200mg (24 tablets)'
+        price:
+          type: number
+          format: float
+          example: 250.00
+        description:
+          type: string
+          example: 'Sealed box, unopened. Pickup available on campus.'
+        category:
+          type: string
+          enum: [wellness]
+          example: wellness
+        stockAvailable:
+          type: boolean
+          example: true
+      required: [id, title, price, category, stockAvailable]
+
+    CounselingListing:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 21
+        title:
+          type: string
+          example: '1-on-1 Counseling Session'
+        price:
+          type: number
+          format: float
+          example: 1500.00
+        description:
+          type: string
+          example: '50-minute session with a licensed campus counselor.'
+        category:
+          type: string
+          enum: [counseling]
+          example: counseling
+        providerName:
+          type: string
+          example: 'Dr. Wanjiku Mwangi'
+      required: [id, title, price, category, providerName]
+
+    Availability:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [available, booked]
+          example: booked
+      required: [status]
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 7
+        label:
+          type: string
+          example: 'Wellness'
+      required: [id, label]
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: 'Listing not found'
+      required: [error]
