@@ -4,8 +4,11 @@ import ListingCard from '../components/ListingCard';
 import categories from '../data/categories.json';
 import './Browse.css';
 
-function Browse({ listings = [], searchQuery = '' }) {
+function Browse({ listings = [], searchQuery = '', loading, error }) {
   const [activeCategory, setActiveCategory] = useState('all');
+
+  if (loading) return <p>Loading listings...</p>;
+  if (error) return <p>Error: {error}</p>;
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
 

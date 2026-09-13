@@ -1,4 +1,4 @@
-1. Group 9 needs read-only access to wellness category listings (title, price, description, stock availability) from StrathShop, in order to recommend relevant self-care or ,over-the-counter items to students after a completed appointment. Must reflect the latest StrathShop data at request time, low-to-moderate volume, no access to StrathShop user accounts or personal information required.
+1. Group 9 needs read-only access to wellness category listings (title, price, description, stock availability) from StrathShop, in order to recommend relevant self-care or, over-the-counter items to students after a completed appointment. Must reflect the latest StrathShop data at request time, low-to-moderate volume, no access to StrathShop user accounts or personal information required.
 
 2. Group 9 needs read-only access to health & counseling service listings (title, provider name, description) from StrathShop, in order to surface available on-campus doctors and counselors offering bookable services. Must reflect the latest StrathShop data at request time, low volume, no access to StrathShop user accounts or personal information required.
 

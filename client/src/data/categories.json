@@ -5,5 +5,7 @@
   { "id": "fashion", "label": "Fashion" },
   { "id": "furniture", "label": "Furniture" },
   { "id": "services", "label": "Services" },
-  { "id": "food", "label": "Food" }
+  { "id": "food", "label": "Food" },
+  { "id": "wellness", "label": "Wellness" },
+  { "id": "counseling", "label": "Counseling" }
 ]

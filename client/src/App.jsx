@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Browse from './pages/Browse';
@@ -7,11 +7,29 @@ import PostListing from './pages/PostListing';
 import Login from './pages/Login';
 import About from './pages/About';
 import Contact from './pages/Contact';
-import seedListings from './data/listings.json';
+import ListingsTable from './pages/ListingsTable';
 
 function App() {
-  const [listings, setListings] = useState(seedListings);
+  const [listings, setListings] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/listings')
+      .then((res) => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then((data) => {
+        setListings(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
 
   function addListing(newListing) {
     setListings((prev) => [newListing, ...prev]);
@@ -22,7 +40,14 @@ function App() {
         <Route element={<Layout onSearch={setSearchQuery} />}>
           <Route
             path="/"
-            element={<Browse listings={listings} searchQuery={searchQuery} />}
+            element={
+              <Browse
+                listings={listings}
+                searchQuery={searchQuery}
+                loading={loading}
+                error={error}
+              />
+            }
           />
           <Route
             path="/listing/:id"
@@ -35,6 +60,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/table" element={<ListingsTable />} />
         </Route>
       </Routes>
     </BrowserRouter>

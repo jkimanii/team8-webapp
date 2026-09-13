@@ -1,10 +1,10 @@
 import { useParams, Link } from 'react-router-dom';
 import './ListingDetail.css';
 
-function ListingDetail({ listings = []}) {
+function ListingDetail({ listings = [] }) {
   const { id } = useParams();
 
-  const listing = listings.find((item) => item.id === id);
+  const listing = listings.find((item) => String(item.id) === id);
 
   if (!listing) {
     return (
@@ -45,7 +45,7 @@ function ListingDetail({ listings = []}) {
 
           <div className="detail-badges">
             <span
-              className={`conditino-badge condition-${condition.toLowerCase().replace(' ', '-')}`}
+              className={`condition-badge condition-${condition.toLowerCase().replace(' ', '-')}`}
             >
               {condition}
             </span>
