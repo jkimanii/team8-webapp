@@ -2,12 +2,12 @@ openapi: 3.0.3
 info:
   title: StrathShop API
   description: >
-    API exposed by Group 8 to Group 9. This contract covers
-    read access to Listings and Categories, plus one scoped write
-    endpoint for updating a listing's availability status after a
-    booking action on their side. No student, session, or user account
-    data is exposed.
-  version: 2.1.0
+    API exposed by Group 8 (StrathShop) to Group 9 (the Strathmore Mental
+    Health App). This contract covers read access to Listings and
+    Categories, plus one scoped write endpoint for updating a listing's
+    availability status after a booking action on their side. No student,
+    session, or user account data is exposed.
+  version: 3.0.0
 
 servers:
   - url: http://localhost:5000/api
@@ -16,19 +16,31 @@ servers:
 paths:
   /listings:
     get:
-      summary: Return marketplace listings filtered by category, used to surface wellness items or counseling services
+      summary: Return marketplace listings, optionally filtered by category
+      description: >
+        Returns listings in the wellness or counseling category, used to
+        surface self-care items and bookable on-campus services.
+
+        Omitting the category parameter returns the full StrathShop
+        catalogue, which includes categories outside this contract's scope
+        (Textbooks, Electronics, Fashion, Furniture, Services, Food). Those
+        listings share the same shape but their category value will not be
+        wellness or counseling. Consumers of this contract should always
+        pass a category.
       parameters:
         - name: category
           in: query
-          required: true
-          description: Which listing category to return
+          required: false
+          description: Which listing category to return. Omit to return all categories.
           schema:
             type: string
             enum: [wellness, counseling]
             example: wellness
       responses:
         '200':
-          description: Listings matching the given category
+          description: >
+            Listings matching the given category. The schemas below describe
+            the filtered responses this contract covers.
           content:
             application/json:
               schema:
@@ -38,7 +50,7 @@ paths:
                     - $ref: '#/components/schemas/WellnessListing'
                     - $ref: '#/components/schemas/CounselingListing'
         '400':
-          description: category is missing or not one of the allowed values
+          description: category was supplied but is not one of the allowed values
           content:
             application/json:
               schema:
@@ -46,7 +58,12 @@ paths:
 
   /listings/{id}:
     get:
-      summary: Return full details for a single listing, used to check current price/stock/availability before recommending it
+      summary: Return full details for a single listing
+      description: >
+        Used to check a listing's current price and availability before
+        recommending it. An id belonging to a listing outside this
+        contract's categories returns the same shape with a different
+        category value.
       parameters:
         - name: id
           in: path
@@ -73,7 +90,13 @@ paths:
 
   /listings/{id}/availability:
     patch:
-      summary: Update a listing's availability status, used when a booking action in Strathmore Mental Health App's system consumes it (e.g. a doctor accepting an appointment)
+      summary: Update a listing's availability status
+      description: >
+        Called when a booking action in the Strathmore Mental Health App
+        consumes a listing (e.g. a doctor accepting an appointment tied to a
+        counseling listing, or a wellness item being claimed). Scoped to the
+        status field only; it cannot change a listing's title, price, or
+        description.
       parameters:
         - name: id
           in: path
@@ -131,7 +154,7 @@ paths:
           description: The category's internal ID
           schema:
             type: integer
-            example: 7
+            example: 8
       responses:
         '200':
           description: Category found
@@ -150,6 +173,7 @@ components:
   schemas:
     WellnessListing:
       type: object
+      description: A physical wellness or over-the-counter item for sale.
       properties:
         id:
           type: integer
@@ -160,21 +184,60 @@ components:
         price:
           type: number
           format: float
+          description: Price in KES. Always a JSON number, never a string.
           example: 250.00
         description:
           type: string
+          nullable: true
+          description: May be null; not every listing has a description.
           example: 'Sealed box, unopened. Pickup available on campus.'
         category:
           type: string
           enum: [wellness]
+          description: Always lowercase, regardless of how it is displayed elsewhere.
           example: wellness
-        stockAvailable:
-          type: boolean
-          example: true
-      required: [id, title, price, category, stockAvailable]
+        condition:
+          type: string
+          enum: [Like New, Good, Fair, 'N/A']
+          example: 'Like New'
+        status:
+          type: string
+          enum: [available, booked]
+          description: >
+            Current availability. Changed via
+            PATCH /listings/{id}/availability.
+          example: available
+        imageUrl:
+          type: string
+          nullable: true
+          example: 'https://placehold.co/400x300?text=Ibuprofen'
+        sellerName:
+          type: string
+          example: 'Strathmore Campus Pharmacy'
+        sellerCampus:
+          type: string
+          example: 'Strathmore University'
+        datePosted:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of when the listing was created.
+          example: '2026-09-11T08:00:00.000Z'
+      required:
+        - id
+        - title
+        - price
+        - description
+        - category
+        - condition
+        - status
+        - imageUrl
+        - sellerName
+        - sellerCampus
+        - datePosted
 
     CounselingListing:
       type: object
+      description: A bookable health or counseling service offered on campus.
       properties:
         id:
           type: integer
@@ -185,18 +248,60 @@ components:
         price:
           type: number
           format: float
+          description: Price in KES. Always a JSON number, never a string.
           example: 1500.00
         description:
           type: string
+          nullable: true
           example: '50-minute session with a licensed campus counselor.'
         category:
           type: string
           enum: [counseling]
           example: counseling
+        condition:
+          type: string
+          enum: ['N/A']
+          description: Not meaningful for services; always "N/A".
+          example: 'N/A'
+        status:
+          type: string
+          enum: [available, booked]
+          description: >
+            Current availability. Changed via
+            PATCH /listings/{id}/availability.
+          example: available
         providerName:
           type: string
+          description: The doctor or counselor offering this service.
           example: 'Dr. Wanjiku Mwangi'
-      required: [id, title, price, category, providerName]
+        imageUrl:
+          type: string
+          nullable: true
+          example: 'https://placehold.co/400x300?text=Counseling+Session'
+        sellerName:
+          type: string
+          description: Same value as providerName for counseling listings.
+          example: 'Dr. Wanjiku Mwangi'
+        sellerCampus:
+          type: string
+          example: 'Strathmore University'
+        datePosted:
+          type: string
+          format: date-time
+          example: '2026-09-11T08:00:00.000Z'
+      required:
+        - id
+        - title
+        - price
+        - description
+        - category
+        - condition
+        - status
+        - providerName
+        - imageUrl
+        - sellerName
+        - sellerCampus
+        - datePosted
 
     Availability:
       type: object
@@ -212,9 +317,10 @@ components:
       properties:
         id:
           type: integer
-          example: 7
+          example: 8
         label:
           type: string
+          description: Display label, capitalised (e.g. "Wellness", not "wellness").
           example: 'Wellness'
       required: [id, label]
 
