@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ListingCard from '../components/ListingCard';
-import categories from '../data/categories.json';
 import './Browse.css';
 
-function Browse({ listings = [], searchQuery = '', loading, error }) {
+function Browse({
+  listings = [],
+  categories = [],
+  searchQuery = '',
+  loading,
+  error,
+}) {
   const [activeCategory, setActiveCategory] = useState('all');
 
   if (loading) return <p>Loading listings...</p>;
@@ -39,11 +44,18 @@ function Browse({ listings = [], searchQuery = '', loading, error }) {
         role="group"
         aria-label="Filter by category"
       >
+        <button
+          className={`filter-btn ${activeCategory === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('all')}
+        >
+          All
+        </button>
+
         {categories.map((cat) => (
           <button
             key={cat.id}
-            className={`filter-btn ${activeCategory === cat.id ? 'active' : ''}`}
-            onClick={() => setActiveCategory(cat.id)}
+            className={`filter-btn ${activeCategory === cat.label ? 'active' : ''}`}
+            onClick={() => setActiveCategory(cat.label)}
           >
             {cat.label}
           </button>

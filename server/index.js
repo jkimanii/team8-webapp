@@ -18,3 +18,6 @@ app.use("/api/listings", listingRoutes);
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
+const categoryRoutes = require("./routes/categories");
+app.use("/api/categories", categoryRoutes);

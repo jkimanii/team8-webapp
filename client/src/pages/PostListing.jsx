@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import categories from '../data/categories.json';
 import './PostListing.css';
 
-function PostListing({ onAddListing }) {
+function PostListing({ onAddListing, categories = [] }) {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -121,13 +120,11 @@ function PostListing({ onAddListing }) {
               className={errors.category ? 'input-error' : ''}
             >
               <option value="">Select a category</option>
-              {categories
-                .filter((cat) => cat.id !== 'all')
-                .map((cat) => (
-                  <option key={cat.id} value={cat.label}>
-                    {cat.label}
-                  </option>
-                ))}
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.label}>
+                  {cat.label}
+                </option>
+              ))}
             </select>
             {errors.category && (
               <span className="error-msg">{errors.category}</span>

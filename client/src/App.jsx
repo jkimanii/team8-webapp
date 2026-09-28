@@ -14,6 +14,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     fetch('http://localhost:5000/api/listings')
@@ -31,6 +32,16 @@ function App() {
       });
   }, []);
 
+  useEffect(() => {
+    fetch('http://localhost:5000/api/categories')
+      .then((res) => {
+        if (!res.ok) throw new Error('Could not load categories');
+        return res.json();
+      })
+      .then(setCategories)
+      .catch((err) => console.error(err));
+  }, []);
+
   function addListing(newListing) {
     setListings((prev) => [newListing, ...prev]);
   }
@@ -43,6 +54,7 @@ function App() {
             element={
               <Browse
                 listings={listings}
+                categories={categories}
                 searchQuery={searchQuery}
                 loading={loading}
                 error={error}
@@ -55,7 +67,9 @@ function App() {
           />
           <Route
             path="/post"
-            element={<PostListing onAddListing={addListing} />}
+            element={
+              <PostListing onAddListing={addListing} categories={categories} />
+            }
           />
           <Route path="/login" element={<Login />} />
           <Route path="/about" element={<About />} />
