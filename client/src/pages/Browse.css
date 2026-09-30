@@ -24,6 +24,7 @@
 }
 
 .filter-btn {
+  text-transform: capitalize;
   padding: 0.4rem 1rem;
   border: 1px solid #d1d5db;
   border-radius: 9999px;

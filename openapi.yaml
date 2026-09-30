@@ -1,13 +1,28 @@
 openapi: 3.0.3
 info:
   title: StrathShop API
-  description: >
+  description: |
     API exposed by Group 8 (StrathShop) to Group 9 (the Strathmore Mental
-    Health App). This contract covers read access to Listings and
-    Categories, plus one scoped write endpoint for updating a listing's
-    availability status after a booking action on their side. No student,
-    session, or user account data is exposed.
-  version: 3.0.0
+    Health App). This contract covers read access to Listings and Categories,
+    plus one scoped write endpoint for updating a listing's availability
+    status after a booking action on their side. No student, session, or user
+    account data is exposed.
+
+    **Conventions**
+
+    - **Identifiers are lowercase.** Every enum value, and the `category`
+      field on a listing, is always returned in lowercase.
+    - **Input is case-insensitive.** The `category` query parameter and the
+      `status` field in a PATCH body are matched without regard to case and
+      with surrounding whitespace trimmed, so `Wellness`, `wellness` and
+      ` WELLNESS ` are the same value. Responses are always lowercase.
+    - **Capitalising for display is the consumer's job.** Any value you can
+      filter or compare on is returned lowercase, `Category.label` included.
+      The one exception is `condition`, which is free text shown as stored
+      ("Like New") and is never used as an identifier.
+    - **Path ids must be positive integers.** A non-integer id is treated as
+      not found and returns 404, not 400.
+  version: 4.0.0
 
 servers:
   - url: http://localhost:5000/api
@@ -31,7 +46,10 @@ paths:
         - name: category
           in: query
           required: false
-          description: Which listing category to return. Omit to return all categories.
+          description: >
+            Which listing category to return. Matched case-insensitively and
+            trimmed, so `Wellness` and `wellness` behave identically. Omit to
+            return the full catalogue.
           schema:
             type: string
             enum: [wellness, counseling]
@@ -68,7 +86,9 @@ paths:
         - name: id
           in: path
           required: true
-          description: The listing's internal ID
+          description: >
+            The listing's internal ID. Must be a positive integer; any other
+            value returns 404.
           schema:
             type: integer
             example: 14
@@ -101,7 +121,9 @@ paths:
         - name: id
           in: path
           required: true
-          description: The listing's internal ID
+          description: >
+            The listing's internal ID. Must be a positive integer; any other
+            value returns 404.
           schema:
             type: integer
             example: 21
@@ -151,7 +173,9 @@ paths:
         - name: id
           in: path
           required: true
-          description: The category's internal ID
+          description: >
+            The category's internal ID. Must be a positive integer; any other
+            value returns 404.
           schema:
             type: integer
             example: 8
@@ -183,7 +207,7 @@ components:
           example: 'Ibuprofen 200mg (24 tablets)'
         price:
           type: number
-          format: float
+          format: double
           description: Price in KES. Always a JSON number, never a string.
           example: 250.00
         description:
@@ -247,7 +271,7 @@ components:
           example: '1-on-1 Counseling Session'
         price:
           type: number
-          format: float
+          format: double
           description: Price in KES. Always a JSON number, never a string.
           example: 1500.00
         description:
@@ -309,6 +333,9 @@ components:
         status:
           type: string
           enum: [available, booked]
+          description: >
+            Accepted case-insensitively on a request ("Booked" is valid) and
+            always returned in lowercase.
           example: booked
       required: [status]
 
@@ -320,8 +347,11 @@ components:
           example: 8
         label:
           type: string
-          description: Display label, capitalised (e.g. "Wellness", not "wellness").
-          example: 'Wellness'
+          description: >
+            Lowercase category name. The same value appears as `category` on a
+            listing and is what the ?category= filter expects. Capitalise it
+            for display.
+          example: wellness
       required: [id, label]
 
     Error:

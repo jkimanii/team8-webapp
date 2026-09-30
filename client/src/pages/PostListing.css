@@ -87,6 +87,12 @@
   min-height: 90px;
 }
 
+/* Category options are lowercase from the API; capitalise for display */
+.form-group select#category,
+.form-group select#category option {
+  text-transform: capitalize;
+}
+
 /* Applied conditionally to inputs/selects/textareas that failed validation */
 .input-error {
   border-color: var(--color-error, #dc2626) !important;
