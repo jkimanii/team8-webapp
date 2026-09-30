@@ -33,6 +33,8 @@
 
 .navbar-search {
   flex: 1;
+  max-width: 420px;
+  margin-right: auto;
 }
 
 .search-input {
@@ -95,6 +97,8 @@
   .navbar-search {
     order: 3;
     flex: 0 0 100%;
+    max-width: none;
+    margin-right: 0;
   }
 
   .nav-link {

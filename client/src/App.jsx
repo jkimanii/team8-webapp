@@ -7,6 +7,7 @@ import PostListing from './pages/PostListing';
 import Login from './pages/Login';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import Clubs from './pages/Clubs';
 import ListingsTable from './pages/ListingsTable';
 
 function App() {
@@ -71,6 +72,7 @@ function App() {
               <PostListing onAddListing={addListing} categories={categories} />
             }
           />
+          <Route path="/clubs" element={<Clubs />} />
           <Route path="/login" element={<Login />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />

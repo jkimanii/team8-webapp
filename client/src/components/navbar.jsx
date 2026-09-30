@@ -42,6 +42,14 @@ function Navbar({ onSearch }) {
           Browse
         </NavLink>
         <NavLink
+          to="/clubs"
+          className={({ isActive }) =>
+            isActive ? 'nav-link active' : 'nav-link'
+          }
+        >
+          Clubs
+        </NavLink>
+        <NavLink
           to="/post"
           className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'
