@@ -40,7 +40,7 @@ StrathShop is the campus marketplace for Strathmore University. This is its REST
 
 - **Base URL (local):** `http://localhost:5000/api`
 - **Format:** JSON in, JSON out. Prices are in KES and are always JSON numbers.
-- **Full reference:** [`https://jkimanii.github.io/team8-webapp/`](https://jkimanii.github.io/team8-webapp/)
+- **Full reference:** [https://jkimanii.github.io/team8-webapp/](https://jkimanii.github.io/team8-webapp/)
 
 ---
 
