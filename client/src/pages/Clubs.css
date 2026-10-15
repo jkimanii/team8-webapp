@@ -118,12 +118,6 @@
   font-size: 0.9rem;
 }
 
-.clubs-error-hint {
-  color: #b91c1c;
-  font-size: 0.85rem !important;
-  margin-bottom: 0 !important;
-}
-
 .empty-state {
   text-align: center;
   padding: 4rem 0;

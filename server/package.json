@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "jest",
+    "test": "jest --testPathIgnorePatterns=campushub",
+    "test:watch": "jest --watch --testPathIgnorePatterns=campushub",
     "test:campushub": "jest campushub"
   },
   "keywords": [],

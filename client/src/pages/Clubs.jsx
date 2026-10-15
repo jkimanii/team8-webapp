@@ -134,11 +134,6 @@ function Clubs() {
           <p>
             <strong>Couldn't load clubs.</strong> {error}
           </p>
-          <p className="clubs-error-hint">
-            CampusHub is a separate service run by Team 7. If their server is
-            offline, this page stays empty while the rest of StrathShop keeps
-            working.
-          </p>
         </div>
       )}
 
@@ -146,9 +141,13 @@ function Clubs() {
         <div className="empty-state">
           <span style={{ fontSize: '2.5rem' }}>🔍</span>
           <p>
-            {search
-              ? <>No clubs match <strong>"{search}"</strong></>
-              : 'No clubs in this category yet.'}
+            {search ? (
+              <>
+                No clubs match <strong>"{search}"</strong>
+              </>
+            ) : (
+              'No clubs in this category yet.'
+            )}
           </p>
         </div>
       )}
