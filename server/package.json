@@ -8,7 +8,8 @@
     "dev": "nodemon index.js",
     "test": "jest --testPathIgnorePatterns=campushub",
     "test:watch": "jest --watch --testPathIgnorePatterns=campushub",
-    "test:campushub": "jest campushub"
+    "test:campushub": "jest campushub",
+    "docs": "npx redocly build-docs ../openapi.yaml --output ../docs/index.html --title \"StrathShop API Docs\""
   },
   "keywords": [],
   "author": "",

@@ -27,4 +27,13 @@ app.use('/api/listings', listingRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/clubs', clubRoutes);
 
+app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
+app.use((err, req, res, next) => {
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'Request body is not valid JSON' });
+  }
+  console.error(err);
+  res.status(500).json({ error: 'Something went wrong' });
+});
+
 module.exports = app;

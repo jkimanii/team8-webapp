@@ -25,6 +25,8 @@ info:
   version: 4.0.0
 
 servers:
+  - url: https://strathshop.onrender.com/api
+    description: Hosted server (Render). The first request after a quiet spell can take about a minute.
   - url: http://localhost:5000/api
     description: Local development server
 
@@ -91,7 +93,7 @@ paths:
             value returns 404.
           schema:
             type: integer
-            example: 14
+            example: 13
       responses:
         '200':
           description: Listing found
@@ -126,7 +128,7 @@ paths:
             value returns 404.
           schema:
             type: integer
-            example: 21
+            example: 17
       requestBody:
         required: true
         content:
@@ -201,7 +203,7 @@ components:
       properties:
         id:
           type: integer
-          example: 14
+          example: 13
         title:
           type: string
           example: 'Ibuprofen 200mg (24 tablets)'
@@ -214,7 +216,7 @@ components:
           type: string
           nullable: true
           description: May be null; not every listing has a description.
-          example: 'Sealed box, unopened. Pickup available on campus.'
+          example: 'Sealed box, unopened. For headaches and minor pain relief. Pickup at the campus pharmacy counter.'
         category:
           type: string
           enum: [wellness]
@@ -244,8 +246,10 @@ components:
         datePosted:
           type: string
           format: date-time
-          description: ISO 8601 timestamp of when the listing was created.
-          example: '2026-09-11T08:00:00.000Z'
+          description: >
+            ISO 8601 timestamp of when the listing was created, in UTC (the
+            trailing Z). Nairobi time (EAT) is UTC+3.
+          example: '2026-09-11T08:41:01.000Z'
       required:
         - id
         - title
@@ -265,7 +269,7 @@ components:
       properties:
         id:
           type: integer
-          example: 21
+          example: 17
         title:
           type: string
           example: '1-on-1 Counseling Session'
@@ -277,7 +281,7 @@ components:
         description:
           type: string
           nullable: true
-          example: '50-minute session with a licensed campus counselor.'
+          example: '50-minute confidential session with a licensed campus counselor. Weekdays, by appointment.'
         category:
           type: string
           enum: [counseling]
@@ -312,7 +316,8 @@ components:
         datePosted:
           type: string
           format: date-time
-          example: '2026-09-11T08:00:00.000Z'
+          description: ISO 8601 timestamp in UTC (the trailing Z). EAT is UTC+3.
+          example: '2026-09-11T08:50:22.000Z'
       required:
         - id
         - title
