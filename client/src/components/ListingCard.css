@@ -43,6 +43,38 @@
   color: #374151;
 }
 
+.card-status {
+  text-transform: capitalize;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.card-status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9ca3af;
+}
+
+.card-status.status-available::before {
+  background: #16a34a;
+}
+
+.card-status.status-booked::before {
+  background: #dc2626;
+}
+
 .card-body {
   padding: 1rem;
 }

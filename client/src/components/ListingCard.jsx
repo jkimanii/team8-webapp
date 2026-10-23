@@ -2,8 +2,16 @@ import { Link } from 'react-router-dom';
 import './ListingCard.css';
 
 function ListingCard({ listing }) {
-  const { id, title, price, condition, sellerCampus, imageUrl, category } =
-    listing;
+  const {
+    id,
+    title,
+    price,
+    condition,
+    sellerCampus,
+    imageUrl,
+    category,
+    status,
+  } = listing;
 
   return (
     <article className="listing-card">
@@ -11,6 +19,9 @@ function ListingCard({ listing }) {
         <div className="card-image-wrapper">
           <img src={imageUrl} alt={title} className="card-image" />
           <span className="card-category">{category}</span>
+          {status && (
+            <span className={`card-status status-${status}`}>{status}</span>
+          )}
         </div>
         <div className="card-body">
           <h2 className="card-title">{title}</h2>

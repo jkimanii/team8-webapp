@@ -25,6 +25,7 @@ function ListingDetail({ listings = [] }) {
     sellerCampus,
     imageUrl,
     description,
+    status,
     datePosted,
   } = listing;
 
@@ -49,6 +50,9 @@ function ListingDetail({ listings = [] }) {
             >
               {condition}
             </span>
+            {status && (
+              <span className={`detail-status status-${status}`}>{status}</span>
+            )}
           </div>
 
           <p className="detail-description">{description}</p>
