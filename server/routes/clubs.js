@@ -1,60 +1,70 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
 
-// Upstream partner: Team 7 (CampusHub). Their contract's server block lists
-// port 5000, which is ours, so this must be set to wherever they actually run.
-const CAMPUSHUB_URL = process.env.CAMPUSHUB_URL || "http://localhost:4000/v1";
-
-// CampusHub rejects unknown query parameters with 400 ("a typo like ?serach=
-// fails loudly"), so only forward the four their contract documents.
-const ALLOWED_PARAMS = ["search", "category", "page", "limit"];
-
-function buildQuery(query) {
-  const params = new URLSearchParams();
-  for (const key of ALLOWED_PARAMS) {
-    const value = query[key];
-    if (value !== undefined && value !== "") params.append(key, value);
-  }
-  const qs = params.toString();
-  return qs ? `?${qs}` : "";
-}
+const CAMPUSHUB_BASE =
+  process.env.CAMPUSHUB_URL ||
+  'https://movable-eastcoast-showman.ngrok-free.dev';
 
 async function proxy(url, res) {
   try {
-    const upstream = await fetch(url);
+    const upstream = await fetch(url, {
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+        Accept: 'application/json',
+      },
+    });
+
     const body = await upstream.json().catch(() => null);
 
     if (!upstream.ok) {
-      // Pass their status and error body through unchanged so the UI can
-      // show what CampusHub actually said.
       return res.status(upstream.status).json(
         body || {
-          error: "upstream_error",
+          error: 'upstream_error',
           message: `CampusHub returned ${upstream.status}`,
         }
       );
     }
 
+    // Normalize response if Team 7 returns { clubs: [...] } instead of { data: [...] }
+    if (body && Array.isArray(body.clubs)) {
+      return res.json({
+        data: body.clubs,
+        page: 1,
+        limit: body.clubs.length,
+        total: body.clubs.length,
+      });
+    }
+
     res.json(body);
   } catch (err) {
-    console.error("CampusHub unreachable:", err.message);
+    console.error('CampusHub unreachable:', err.message);
     res.status(502).json({
-      error: "upstream_unavailable",
-      message:
-        "Could not reach CampusHub. Check that their server is running and CAMPUSHUB_URL is correct.",
+      error: 'upstream_unavailable',
+      message: 'Could not reach CampusHub.',
     });
   }
 }
 
-// GET /api/clubs -> CampusHub GET /clubs
-router.get("/", async (req, res) => {
-  await proxy(`${CAMPUSHUB_URL}/clubs${buildQuery(req.query)}`, res);
+// EVENTS ROUTES
+router.get('/events', async (req, res) => {
+  await proxy(`${CAMPUSHUB_BASE}/api/events`, res);
 });
 
-// GET /api/clubs/:id -> CampusHub GET /clubs/{id}
-router.get("/:id", async (req, res) => {
+router.get('/events/:id', async (req, res) => {
   await proxy(
-    `${CAMPUSHUB_URL}/clubs/${encodeURIComponent(req.params.id)}`,
+    `${CAMPUSHUB_BASE}/api/events/${encodeURIComponent(req.params.id)}`,
+    res
+  );
+});
+
+// CLUBS ROUTES
+router.get('/', async (req, res) => {
+  await proxy(`${CAMPUSHUB_BASE}/api/clubs`, res);
+});
+
+router.get('/:id', async (req, res) => {
+  await proxy(
+    `${CAMPUSHUB_BASE}/api/clubs/${encodeURIComponent(req.params.id)}`,
     res
   );
 });
