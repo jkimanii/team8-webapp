@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
-const CAMPUSHUB_BASE =
-  process.env.CAMPUSHUB_URL ||
-  'https://movable-eastcoast-showman.ngrok-free.dev';
+const CAMPUSHUB_BASE = process.env.CAMPUSHUB_URL;
+const CAMPUSHUB_API_KEY = process.env.CAMPUSHUB_API_KEY;
 
 async function proxy(url, res) {
   try {
