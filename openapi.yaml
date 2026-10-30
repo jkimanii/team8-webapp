@@ -8,6 +8,13 @@ info:
     status after a booking action on their side. No student, session, or user
     account data is exposed.
 
+    **Authentication.** Every endpoint except `/health` requires an
+    `X-API-Key` header. A missing or invalid key returns 401. A valid key that 
+    is read-only and tries to change data returns 403.
+
+    **Rate limit.** 100 requests per minute per key. Over the limit you get
+    429 with a `Retry-After` header (seconds) and a JSON body.
+
     **Conventions**
 
     - **Identifiers are lowercase.** Every enum value, and the `category`
@@ -22,7 +29,7 @@ info:
       ("Like New") and is never used as an identifier.
     - **Path ids must be positive integers.** A non-integer id is treated as
       not found and returns 404, not 400.
-  version: 4.0.0
+  version: 5.0.0
 
 servers:
   - url: https://strathshop.onrender.com/api
@@ -30,7 +37,41 @@ servers:
   - url: http://localhost:5000/api
     description: Local development server
 
+security:
+  - apiKey: []
+
 paths:
+  /health:
+    get:
+      summary: Health check
+      description: >
+        The only endpoint that needs no key. Returns ok when the API and its
+        database are reachable. Used by the uptime monitor.
+      security: []
+      responses:
+        '200':
+          description: The API and its database are up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                required: [status]
+        '503':
+          description: The database is unreachable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [unavailable]
+                required: [status]
+
   /listings:
     get:
       summary: Return marketplace listings, optionally filtered by category
@@ -57,6 +98,10 @@ paths:
             enum: [wellness, counseling]
             example: wellness
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: >
             Listings matching the given category. The schemas below describe
@@ -95,6 +140,10 @@ paths:
             type: integer
             example: 13
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Listing found
           content:
@@ -136,6 +185,10 @@ paths:
             schema:
               $ref: '#/components/schemas/Availability'
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Availability status updated
           content:
@@ -148,6 +201,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           description: No listing found with that ID
           content:
@@ -159,6 +214,10 @@ paths:
     get:
       summary: Return the list of available marketplace categories
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: All available categories
           content:
@@ -182,6 +241,10 @@ paths:
             type: integer
             example: 8
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Category found
           content:
@@ -196,6 +259,46 @@ paths:
                 $ref: '#/components/schemas/Error'
 
 components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: >
+        One key per consumer, issued privately by Group 8. Send it on every
+        request.
+  responses:
+    Unauthorized:
+      description: Missing or invalid API key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'Missing or invalid API key'
+    Forbidden:
+      description: The key is valid but read-only, and this request would change data.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'This API key is read-only'
+    TooManyRequests:
+      description: Rate limit exceeded (100 requests per minute per key). Wait for Retry-After seconds.
+      headers:
+        Retry-After:
+          description: Seconds until this key's allowance resets.
+          schema:
+            type: integer
+            example: 42
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RateLimitError'
+          example:
+            error: 'Too many requests'
+            retryAfter: 42
   schemas:
     WellnessListing:
       type: object
@@ -366,3 +469,15 @@ components:
           type: string
           example: 'Listing not found'
       required: [error]
+
+    RateLimitError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: 'Too many requests'
+        retryAfter:
+          type: integer
+          description: Seconds until the allowance resets. Same value as the Retry-After header.
+          example: 42
+      required: [error, retryAfter]

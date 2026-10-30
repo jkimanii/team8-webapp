@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import ClubCard from '../components/ClubCard';
+import { apiFetch } from '../api';
 import './Clubs.css';
 
-const CLUBS_API = 'http://localhost:5000/api/clubs';
-const EVENTS_API = 'http://localhost:5000/api/clubs/events';
+const CLUBS_PATH = '/clubs';
+const EVENTS_PATH = '/clubs/events';
 const PAGE_SIZE = 12;
 
 function formatEATDate(isoString) {
@@ -48,7 +49,7 @@ function Clubs() {
 
   // Fetch categories and club lookup map
   useEffect(() => {
-    fetch(CLUBS_API)
+    apiFetch(CLUBS_PATH)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((body) => {
         // Handle both { data: [...] }, { clubs: [...] }, or raw [...] array
@@ -73,7 +74,7 @@ function Clubs() {
     setLoading(true);
     setError(null);
 
-    fetch(CLUBS_API)
+    apiFetch(CLUBS_PATH)
       .then(async (res) => {
         const body = await res.json().catch(() => null);
         if (!res.ok) {
@@ -119,7 +120,7 @@ function Clubs() {
     setEventsLoading(true);
     setEventsError(null);
 
-    fetch(EVENTS_API)
+    apiFetch(EVENTS_PATH)
       .then(async (res) => {
         const body = await res.json().catch(() => null);
         if (!res.ok) {

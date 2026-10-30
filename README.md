@@ -11,10 +11,10 @@ StrathShop is the campus marketplace for Strathmore University. This is its REST
 
 ## Quickstart (60 seconds)
 
-Copy, paste, run. Nothing to install and nothing to sign up for.
+Copy, paste, run. Nothing to install and nothing to sign up for. However, you need an API key
 
 ```bash
-curl "https://strathshop.onrender.com/api/listings?category=wellness"
+curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/listings?category=wellness
 ```
 
 **The first request can take about a minute.** The hosted server sleeps after a quiet spell and wakes on the next request. Wait for it; later requests answer in under a second.
@@ -45,7 +45,26 @@ If you got a JSON array back, the API works and everything below will too. If no
 
 ## Authentication
 
-**None in this version.** You do not need a token or API key: send requests exactly as shown in this README. Authentication is being added in a later release; when it arrives, this section will say exactly which header to send.
+## Authentication
+
+Every endpoint except `GET /api/health` needs an API key, sent in the
+`X-API-Key` header. Group 8 issues each consumer its own key, privately. If you
+don't have one, ask your Group 8 contact.
+
+```bash
+curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/listings?category=wellness
+```
+
+| Situation                                                   | Response                                                                                    |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Key missing or wrong                                        | `401` `{ "error": "Missing or invalid API key" }`                                           |
+| Valid key, but it is read-only and the request changes data | `403` `{ "error": "This API key is read-only" }`                                            |
+| Too many requests                                           | `429` `{ "error": "Too many requests", "retryAfter": 42 }`, with a `Retry-After: 42` header |
+
+## Rate limit
+
+100 requests per minute per key. When you go over, wait the number of seconds in
+the `Retry-After` header before trying again.
 
 ---
 
@@ -76,7 +95,7 @@ All examples use the hosted server. They use macOS/Linux/Git Bash syntax; see [W
 ### 1. List listings by category
 
 ```bash
-curl "https://strathshop.onrender.com/api/listings?category=counseling"
+curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/listings?category=counseling
 ```
 
 **200 OK**: an array of the four counseling listings (ids 17 to 20). The first is shown:
@@ -105,7 +124,7 @@ An unrecognised category returns `400` (see [Errors](#errors)).
 ### 2. Get one listing
 
 ```bash
-curl https://strathshop.onrender.com/api/listings/13
+curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/listings/13
 ```
 
 **200 OK**: the same object shape as in the lists above, but a single object, not an array:
@@ -133,7 +152,7 @@ Use this to check a listing's current `price` and `status` before recommending i
 This is the only write endpoint. It changes `status` and nothing else (it cannot edit a title, price or description). It changes the live data, so undo your test afterwards.
 
 ```bash
-curl -X PATCH https://strathshop.onrender.com/api/listings/17/availability \
+curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api/listings/17/availability \
   -H "Content-Type: application/json" \
   -d '{"status": "booked"}'
 ```
@@ -147,7 +166,7 @@ curl -X PATCH https://strathshop.onrender.com/api/listings/17/availability \
 `status` must be `available` or `booked` (any capitalisation, surrounding spaces ignored). To undo the example above:
 
 ```bash
-curl -X PATCH https://strathshop.onrender.com/api/listings/17/availability \
+curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api/listings/17/availability \
   -H "Content-Type: application/json" \
   -d '{"status": "available"}'
 ```
@@ -155,7 +174,7 @@ curl -X PATCH https://strathshop.onrender.com/api/listings/17/availability \
 ### 4. List all categories
 
 ```bash
-curl https://strathshop.onrender.com/api/categories
+curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/categories
 ```
 
 **200 OK**: an array of `{ id, label }` objects, one per category. `label` is lowercase and is the exact value the `?category=` filter expects:
@@ -176,7 +195,7 @@ curl https://strathshop.onrender.com/api/categories
 ### 5. Get one category
 
 ```bash
-curl https://strathshop.onrender.com/api/categories/8
+curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/categories/8
 ```
 
 **200 OK**
@@ -197,15 +216,18 @@ Every failed request returns a non-2xx status code and a JSON body with a single
 
 To tell success from failure, check the HTTP status code first. The `error` text is meant for humans and may be reworded, so don't match on it in code.
 
-| Status            | When it happens                                                                                                                        | Example request                |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| `400 Bad Request` | `category` is not `wellness` or `counseling`; or `status` is missing or not `available`/`booked`; or the request body isn’t valid JSON | `GET /listings?category=pizza` |
-| `404 Not Found`   | No listing or category with that id, or the id isn't a positive integer                                                                | `GET /listings/9999`           |
+| Status                  | When it happens                                                                                                                        | Example request                                                   |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `400 Bad Request`       | `category` is not `wellness` or `counseling`; or `status` is missing or not `available`/`booked`; or the request body isn’t valid JSON | `GET /listings?category=pizza`                                    |
+| `404 Not Found`         | No listing or category with that id, or the id isn't a positive integer                                                                | `GET /listings/9999`                                              |
+| `401 Unauthorized`      | The `X-API-Key` header is missing or wrong                                                                                             | `GET /listings/13` (any request sent with no key)                 |
+| `403 Forbidden`         | The key is valid but read-only, and the request changes data                                                                           | `PATCH /listings/17/availability` (sent with a read-only key)     |
+| `429 Too Many Requests` | More than 100 requests in a minute with one key                                                                                        | `GET /listings?category=wellness` (the 101st request in a minute) |
 
 Real example, a listing that doesn't exist:
 
 ```bash
-curl -i https://strathshop.onrender.com/api/listings/9999
+curl -H "X-API-Key: <your-api-key>" -i https://strathshop.onrender.com/api/listings/9999
 ```
 
 `404 Not Found`
@@ -261,6 +283,13 @@ npm install
 cp .env.example .env
 ```
 
+Then open `server/.env` and set `API_KEYS` to one or more `name:key` pairs, for example
+`API_KEYS=me:<a-long-random-key>`. Make a key with:
+
+    node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
+
+Every local request then needs `-H "X-API-Key: <that-key>"`.
+
 On Windows `cmd.exe`, use `copy .env.example .env` instead of `cp`. Then open `server/.env` and set `DB_PASSWORD` to your MySQL password. If your MySQL isn't on the default port 3306, also change `DB_PORT`. Leave the other values as they are.
 
 ```bash
@@ -272,7 +301,7 @@ npm start
 **5. Check it works**
 
 ```bash
-curl "http://localhost:5000/api/listings?category=wellness"
+curl -H "X-API-Key: <your-api-key>" http://localhost:5000/api/listings?category=wellness
 ```
 
 If that returns a JSON array, you're done. To stop the server, press Ctrl-C.
@@ -292,7 +321,7 @@ Then open `http://localhost:5173`.
 In `cmd.exe`, single quotes don't work and JSON needs escaped double quotes. The PATCH example becomes:
 
 ```bat
-curl -X PATCH https://strathshop.onrender.com/api/listings/17/availability -H "Content-Type: application/json" -d "{\"status\": \"booked\"}"
+curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api/listings/17/availability -H "Content-Type: application/json" -d "{\"status\": \"booked\"}"
 ```
 
 In PowerShell, `curl` is a different command with different options. Type `curl.exe` instead, or run the commands in Git Bash. For the PATCH request in PowerShell, Git Bash is the easier route.
@@ -301,16 +330,19 @@ In PowerShell, `curl` is a different command with different options. Type `curl.
 
 ## If something goes wrong
 
-| Symptom                                                          | Likely cause                                                 | Fix                                                                                   |
-| ---------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| The first hosted request takes about a minute                    | The free server was asleep                                   | Wait; it answers quickly afterwards                                                   |
-| `Failed to connect` / `connection refused` on `localhost:5000`   | Your local server isn't running, or it's on a different port | Re-run `npm start` in `server/` and check the port it prints                          |
-| The server crashes or returns `500` with `ECONNREFUSED`          | MySQL isn't running, or `DB_PORT` is wrong                   | Start the MySQL server (on Windows, the `MySQL80` service); check `DB_PORT` in `.env` |
-| `Access denied for user 'root'`                                  | Wrong `DB_PASSWORD`                                          | Fix it in `server/.env`, then stop the server with Ctrl-C and run `npm start` again   |
-| `Unknown database 'strathshop'`                                  | Step 2 was skipped, or `DB_NAME` doesn't match               | Create the database; check `DB_NAME` in `.env`                                        |
-| `Table 'strathshop.listings' doesn't exist`                      | `schema.sql` wasn't run                                      | Run step 3                                                                            |
-| `200` but an empty array `[]`                                    | `seed.sql` wasn't run                                        | Run `seed.sql`                                                                        |
-| `Duplicate entry ... for key 'PRIMARY'` while running `seed.sql` | The sample data is already loaded                            | Run `schema.sql` first to reset, then `seed.sql`                                      |
-| `mysql` is not recognised                                        | The MySQL program isn't on your PATH                         | Run it by its full path (see Run it locally), or add its folder to your PATH          |
-| `400` on a category you're sure is valid                         | Typo, or a category outside `wellness` / `counseling`        | Check spelling; see `GET /categories`                                                 |
-| `404` on an id that looks right                                  | The id isn't in the database, or it isn't a plain integer    | Try `GET /listings?category=wellness` to see real ids                                 |
+| Symptom                                                          | Likely cause                                                 | Fix                                                                                                              |
+| ---------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| The first hosted request takes about a minute                    | The free server was asleep                                   | Wait; it answers quickly afterwards                                                                              |
+| `Failed to connect` / `connection refused` on `localhost:5000`   | Your local server isn't running, or it's on a different port | Re-run `npm start` in `server/` and check the port it prints                                                     |
+| The server crashes or returns `500` with `ECONNREFUSED`          | MySQL isn't running, or `DB_PORT` is wrong                   | Start the MySQL server (on Windows, the `MySQL80` service); check `DB_PORT` in `.env`                            |
+| `Access denied for user 'root'`                                  | Wrong `DB_PASSWORD`                                          | Fix it in `server/.env`, then stop the server with Ctrl-C and run `npm start` again                              |
+| `Unknown database 'strathshop'`                                  | Step 2 was skipped, or `DB_NAME` doesn't match               | Create the database; check `DB_NAME` in `.env`                                                                   |
+| `Table 'strathshop.listings' doesn't exist`                      | `schema.sql` wasn't run                                      | Run step 3                                                                                                       |
+| `200` but an empty array `[]`                                    | `seed.sql` wasn't run                                        | Run `seed.sql`                                                                                                   |
+| `Duplicate entry ... for key 'PRIMARY'` while running `seed.sql` | The sample data is already loaded                            | Run `schema.sql` first to reset, then `seed.sql`                                                                 |
+| `mysql` is not recognised                                        | The MySQL program isn't on your PATH                         | Run it by its full path (see Run it locally), or add its folder to your PATH                                     |
+| `400` on a category you're sure is valid                         | Typo, or a category outside `wellness` / `counseling`        | Check spelling; see `GET /categories`                                                                            |
+| `404` on an id that looks right                                  | The id isn't in the database, or it isn't a plain integer    | Try `GET /listings?category=wellness` to see real ids                                                            |
+| `401` on every call                                              | Header name wrong, key wrong, or `API_KEYS` not loaded       | The header is exactly `X-API-Key`; check `server/.env`; the server prints how many keys it loaded when it starts |
+| `403` on a PATCH                                                 | Your key is read-only                                        | Ask for a key that can write                                                                                     |
+| `429`                                                            | More than 100 requests in a minute                           | Wait for `Retry-After` seconds, or call less often                                                               |

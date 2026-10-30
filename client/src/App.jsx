@@ -9,6 +9,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import Clubs from './pages/Clubs';
 import ListingsTable from './pages/ListingsTable';
+import { apiFetch } from './api';
 
 function App() {
   const [listings, setListings] = useState([]);
@@ -18,7 +19,7 @@ function App() {
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/listings')
+    apiFetch('/listings')
       .then((res) => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
@@ -34,7 +35,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/categories')
+    apiFetch('/categories')
       .then((res) => {
         if (!res.ok) throw new Error('Could not load categories');
         return res.json();
