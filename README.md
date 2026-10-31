@@ -284,9 +284,7 @@ cp .env.example .env
 ```
 
 Then open `server/.env` and set `API_KEYS` to one or more `name:key` pairs, for example
-`API_KEYS=me:<a-long-random-key>`. Make a key with:
-
-    node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
+`API_KEYS=me:<a-long-random-key>`.
 
 Every local request then needs `-H "X-API-Key: <that-key>"`.
 
@@ -311,6 +309,12 @@ If that returns a JSON array, you're done. To stop the server, press Ctrl-C.
 ```bash
 cd client
 npm install
+cp .env.local.example .env.local
+```
+
+Then open `client/.env.local` and set `VITE_API_KEY` to `your-website-api-key`.
+
+```bash
 npm run dev
 ```
 
