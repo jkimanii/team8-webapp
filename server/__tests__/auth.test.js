@@ -6,7 +6,7 @@ jest.mock('../db', () => ({ query: jest.fn() }));
 
 // Set BEFORE the app is loaded: the app reads these when it starts.
 process.env.API_KEYS =
-  'group9:group9-test-key,website:website-test-key,team8-test:team8-test-key';
+  'team9:group9-test-key,website:website-test-key,team8-test:team8-test-key';
 process.env.READ_ONLY_CONSUMERS = 'website';
 process.env.RATE_LIMIT_MAX = '1000'; // out of the way; limiter has its own test below
 
@@ -72,14 +72,22 @@ describe('authentication: every /api endpoint needs a key', () => {
   });
 
   test('each consumer has its own working key', async () => {
-    for (const key of ['group9-test-key', 'website-test-key', 'team8-test-key']) {
-      const res = await request(app).get('/api/listings/13').set('X-API-Key', key);
+    for (const key of [
+      'group9-test-key',
+      'website-test-key',
+      'team8-test-key',
+    ]) {
+      const res = await request(app)
+        .get('/api/listings/13')
+        .set('X-API-Key', key);
       expect(res.status).toBe(200);
     }
   });
 
   test('the 401 never echoes a key', async () => {
-    const res = await request(app).get('/api/listings/13').set('X-API-Key', 'secret-guess');
+    const res = await request(app)
+      .get('/api/listings/13')
+      .set('X-API-Key', 'secret-guess');
     expect(JSON.stringify(res.body)).not.toContain('secret-guess');
   });
 
@@ -90,7 +98,11 @@ describe('authentication: every /api endpoint needs a key', () => {
   });
 
   test('health reports 503, without details, when the database is down', async () => {
-    db.query.mockRejectedValue(Object.assign(new Error('connect ECONNREFUSED 10.0.0.5:3306'), { code: 'ECONNREFUSED' }));
+    db.query.mockRejectedValue(
+      Object.assign(new Error('connect ECONNREFUSED 10.0.0.5:3306'), {
+        code: 'ECONNREFUSED',
+      })
+    );
     const res = await request(app).get('/api/health');
     expect(res.status).toBe(503);
     expect(res.body).toEqual({ status: 'unavailable' });
@@ -154,7 +166,9 @@ describe('errors are JSON and leak nothing', () => {
 
   test('a database failure is a generic 500, not the database error', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
-    db.query.mockRejectedValue(new Error("Table 'strathshop.listings' doesn't exist"));
+    db.query.mockRejectedValue(
+      new Error("Table 'strathshop.listings' doesn't exist")
+    );
     const res = await request(app).get('/api/listings/13').set(GROUP9);
     expect(res.status).toBe(500);
     expect(res.text).not.toMatch(/strathshop|Table/);
@@ -165,7 +179,10 @@ describe('errors are JSON and leak nothing', () => {
 describe('rate limiting', () => {
   // The handout's demonstration: a tiny limit, five quick requests.
   const tiny = express();
-  tiny.use((req, res, next) => { req.consumer = { name: 'demo', readOnly: false }; next(); });
+  tiny.use((req, res, next) => {
+    req.consumer = { name: 'demo', readOnly: false };
+    next();
+  });
   tiny.use(rateLimit({ windowMs: 60000, max: 3 }));
   tiny.get('/ping', (req, res) => res.json({ ok: true }));
 
@@ -184,12 +201,19 @@ describe('rate limiting', () => {
 
   test('one consumer hitting the limit does not block another', async () => {
     const two = express();
-    two.use((req, res, next) => { req.consumer = { name: req.get('x-who'), readOnly: false }; next(); });
+    two.use((req, res, next) => {
+      req.consumer = { name: req.get('x-who'), readOnly: false };
+      next();
+    });
     two.use(rateLimit({ windowMs: 60000, max: 1 }));
     two.get('/ping', (req, res) => res.json({ ok: true }));
 
     await request(two).get('/ping').set('x-who', 'a');
-    expect((await request(two).get('/ping').set('x-who', 'a')).status).toBe(429);
-    expect((await request(two).get('/ping').set('x-who', 'b')).status).toBe(200);
+    expect((await request(two).get('/ping').set('x-who', 'a')).status).toBe(
+      429
+    );
+    expect((await request(two).get('/ping').set('x-who', 'b')).status).toBe(
+      200
+    );
   });
 });
