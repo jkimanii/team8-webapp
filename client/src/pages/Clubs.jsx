@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import ClubCard from '../components/ClubCard';
+import StaleBanner from '../components/StaleBanner';
 import { apiFetch } from '../api';
 import './Clubs.css';
 
@@ -38,6 +39,7 @@ function Clubs() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [clubsStaleAsOf, setClubsStaleAsOf] = useState(null);
 
   // Events state
   const [events, setEvents] = useState([]);
@@ -46,6 +48,7 @@ function Clubs() {
   const [selectedClubId, setSelectedClubId] = useState('');
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState(null);
+  const [eventsStaleAsOf, setEventsStaleAsOf] = useState(null);
 
   // Fetch categories and club lookup map
   useEffect(() => {
@@ -107,10 +110,12 @@ function Clubs() {
         // Client-side pagination slice
         const start = (page - 1) * PAGE_SIZE;
         setClubs(list.slice(start, start + PAGE_SIZE));
+        setClubsStaleAsOf(body.stale ? body.asOf : null);
         setLoading(false);
       })
       .catch((err) => {
         setError(err.message);
+        setClubsStaleAsOf(null);
         setLoading(false);
       });
   }, [search, activeCategory, page]);
@@ -139,10 +144,12 @@ function Clubs() {
         setEventsTotal(list.length);
         const start = (eventsPage - 1) * PAGE_SIZE;
         setEvents(list.slice(start, start + PAGE_SIZE));
+        setEventsStaleAsOf(body.stale ? body.asOf : null);
         setEventsLoading(false);
       })
       .catch((err) => {
         setEventsError(err.message);
+        setEventsStaleAsOf(null);
         setEventsLoading(false);
       });
   }, [selectedClubId, eventsPage]);
@@ -240,6 +247,8 @@ function Clubs() {
               ))}
             </div>
           )}
+
+          <StaleBanner asOf={clubsStaleAsOf} />
 
           {loading && <p className="clubs-status">Loading clubs...</p>}
 
@@ -345,6 +354,8 @@ function Clubs() {
               )}
             </div>
           </div>
+
+          <StaleBanner asOf={eventsStaleAsOf} />
 
           {eventsLoading && <p className="clubs-status">Loading events...</p>}
 
