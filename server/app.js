@@ -79,3 +79,11 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
+
+   const { monitor, statsHandler } = require('./middleware/monitoring');
+   app.use(monitor);                                   // FIRST
+app.use(requireApiKey);
+app.use(rateLimit({ windowMs: 60000, max: 100 }));
+app.get('/stats', statsHandler);  
+
+   

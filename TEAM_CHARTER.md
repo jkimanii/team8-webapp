@@ -1,7 +1,7 @@
-Team 8 Roles:
-API Lead: James Kimani
-Integration/QA: Simon Ndeithi
-Backend Dev: Colin Akandinda
+Team 8 Roles:\
+API Lead: James Kimani\
+Integration/QA: Simon Ndeithi\
+Backend Dev: Colin Akandinda\
 Docs/DevOps Lead: Carnell Ngure 224641
 
 Link to repository: https://github.com/jkimanii/team8-webapp 

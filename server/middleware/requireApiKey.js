@@ -88,7 +88,7 @@ function requireApiKey(req, res, next) {
     console.warn(`403 ${req.method} ${req.originalUrl} (${match.name} is read-only)`);
     return res.status(403).json({ error: 'This API key is read-only' });
   }
-
+  req.apiKey = provided; // for monitoring.js to log a hash of it
   next();
 }
 
