@@ -24,5 +24,3 @@ dist-ssr
 *.sw?
 .env
 postman/
-v1_after.json
-v1_before.json

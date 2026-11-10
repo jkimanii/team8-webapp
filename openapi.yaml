@@ -8,8 +8,16 @@ info:
     status after a booking action on their side. No student, session, or user
     account data is exposed.
 
+    **Versions.** v2 lives under `/api/v2` and is the version to use. The only
+    difference from v1 is that `GET /listings` and `GET /categories` return
+    `{ "data": [...], "count": N }` instead of a bare list. v1 is deprecated:
+    it still answers at `/api/v1/...` and at the old unversioned `/api/...`
+    URLs, with exactly the old shape, and every v1 response carries
+    `Deprecation`, `Sunset` and `Link` headers. v1 stops working on
+    13 November 2026.
+
     **Authentication.** Every endpoint except `/health` requires an
-    `X-API-Key` header. A missing or invalid key returns 401. A valid key that 
+    `X-API-Key` header. A missing or invalid key returns 401. A valid key that
     is read-only and tries to change data returns 403.
 
     **Rate limit.** 100 requests per minute per key. Over the limit you get
@@ -29,7 +37,7 @@ info:
       ("Like New") and is never used as an identifier.
     - **Path ids must be positive integers.** A non-integer id is treated as
       not found and returns 404, not 400.
-  version: 5.0.0
+  version: 6.0.0
 
 servers:
   - url: https://strathshop.onrender.com/api
@@ -40,9 +48,261 @@ servers:
 security:
   - apiKey: []
 
+tags:
+  - name: v2
+    description: The current version. Use these.
+  - name: v1 (deprecated)
+    description: >
+      The old shape, still running until 13 November 2026. Each path also
+      answers under `/v1` (for example `/v1/listings`). Every response carries
+      `Deprecation`, `Sunset` and `Link` headers.
+  - name: Operations
+    description: Health check and monitoring.
+
 paths:
+  # ------------------------------------------------------------------ v2
+  /v2/listings:
+    get:
+      tags: [v2]
+      summary: Return marketplace listings, optionally filtered by category
+      description: >
+        Returns listings in the wellness or counseling category, used to
+        surface self-care items and bookable on-campus services, wrapped in
+        `{ data, count }`.
+
+        Omitting the category parameter returns the full StrathShop
+        catalogue, which includes categories outside this contract's scope
+        (Textbooks, Electronics, Fashion, Furniture, Services, Food). Those
+        listings share the same shape but their category value will not be
+        wellness or counseling. Consumers of this contract should always
+        pass a category.
+      parameters:
+        - $ref: '#/components/parameters/CategoryQuery'
+      responses:
+        '200':
+          description: Listings matching the given category, wrapped in `{ data, count }`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingPage'
+        '400':
+          $ref: '#/components/responses/BadCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /v2/listings/{id}:
+    get:
+      tags: [v2]
+      summary: Return full details for a single listing
+      description: >
+        Used to check a listing's current price and availability before
+        recommending it. Returns the listing itself, not wrapped. An id
+        belonging to a listing outside this contract's categories returns the
+        same shape with a different category value.
+      parameters:
+        - $ref: '#/components/parameters/ListingId'
+      responses:
+        '200':
+          $ref: '#/components/responses/OneListing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ListingNotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /v2/listings/{id}/availability:
+    patch:
+      tags: [v2]
+      summary: Update a listing's availability status
+      description: >
+        Called when a booking action in the Strathmore Mental Health App
+        consumes a listing (e.g. a doctor accepting an appointment tied to a
+        counseling listing, or a wellness item being claimed). Scoped to the
+        status field only; it cannot change a listing's title, price, or
+        description. Sending the same request twice succeeds both times.
+      parameters:
+        - $ref: '#/components/parameters/ListingId'
+      requestBody:
+        $ref: '#/components/requestBodies/Availability'
+      responses:
+        '200':
+          $ref: '#/components/responses/AvailabilityUpdated'
+        '400':
+          $ref: '#/components/responses/BadStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ListingNotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /v2/categories:
+    get:
+      tags: [v2]
+      summary: Return the list of available marketplace categories
+      responses:
+        '200':
+          description: All available categories, wrapped in `{ data, count }`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /v2/categories/{id}:
+    get:
+      tags: [v2]
+      summary: Return a single category's details by ID
+      parameters:
+        - $ref: '#/components/parameters/CategoryId'
+      responses:
+        '200':
+          $ref: '#/components/responses/OneCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/CategoryNotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ------------------------------------------------------------------ v1
+  /listings:
+    get:
+      tags: [v1 (deprecated)]
+      deprecated: true
+      summary: (v1) Return listings as a bare list
+      description: >
+        Deprecated. Use `GET /v2/listings`, which returns the same listings
+        wrapped in `{ data, count }`. Also answers at `/v1/listings`.
+      parameters:
+        - $ref: '#/components/parameters/CategoryQuery'
+      responses:
+        '200':
+          description: Listings matching the given category, as a bare list.
+          headers:
+            Deprecation:
+              $ref: '#/components/headers/Deprecation'
+            Sunset:
+              $ref: '#/components/headers/Sunset'
+            Link:
+              $ref: '#/components/headers/Link'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  oneOf:
+                    - $ref: '#/components/schemas/WellnessListing'
+                    - $ref: '#/components/schemas/CounselingListing'
+        '400':
+          $ref: '#/components/responses/BadCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /listings/{id}:
+    get:
+      tags: [v1 (deprecated)]
+      deprecated: true
+      summary: (v1) Return one listing
+      description: Deprecated. Same response as `GET /v2/listings/{id}`. Also answers at `/v1/listings/{id}`.
+      parameters:
+        - $ref: '#/components/parameters/ListingId'
+      responses:
+        '200':
+          $ref: '#/components/responses/OneListing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ListingNotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /listings/{id}/availability:
+    patch:
+      tags: [v1 (deprecated)]
+      deprecated: true
+      summary: (v1) Update a listing's availability status
+      description: >
+        Deprecated. Same request and response as
+        `PATCH /v2/listings/{id}/availability`. Also answers at
+        `/v1/listings/{id}/availability`.
+      parameters:
+        - $ref: '#/components/parameters/ListingId'
+      requestBody:
+        $ref: '#/components/requestBodies/Availability'
+      responses:
+        '200':
+          $ref: '#/components/responses/AvailabilityUpdated'
+        '400':
+          $ref: '#/components/responses/BadStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ListingNotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /categories:
+    get:
+      tags: [v1 (deprecated)]
+      deprecated: true
+      summary: (v1) Return categories as a bare list
+      description: Deprecated. Use `GET /v2/categories`. Also answers at `/v1/categories`.
+      responses:
+        '200':
+          description: All available categories, as a bare list.
+          headers:
+            Deprecation:
+              $ref: '#/components/headers/Deprecation'
+            Sunset:
+              $ref: '#/components/headers/Sunset'
+            Link:
+              $ref: '#/components/headers/Link'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /categories/{id}:
+    get:
+      tags: [v1 (deprecated)]
+      deprecated: true
+      summary: (v1) Return one category
+      description: Deprecated. Same response as `GET /v2/categories/{id}`. Also answers at `/v1/categories/{id}`.
+      parameters:
+        - $ref: '#/components/parameters/CategoryId'
+      responses:
+        '200':
+          $ref: '#/components/responses/OneCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/CategoryNotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ---------------------------------------------------------- operations
   /health:
     get:
+      tags: [Operations]
       summary: Health check
       description: >
         The only endpoint that needs no key. Returns ok when the API and its
@@ -72,191 +332,27 @@ paths:
                     enum: [unavailable]
                 required: [status]
 
-  /listings:
+  /stats:
     get:
-      summary: Return marketplace listings, optionally filtered by category
+      tags: [Operations]
+      summary: Running totals since the server last started
       description: >
-        Returns listings in the wellness or counseling category, used to
-        surface self-care items and bookable on-campus services.
-
-        Omitting the category parameter returns the full StrathShop
-        catalogue, which includes categories outside this contract's scope
-        (Textbooks, Electronics, Fashion, Furniture, Services, Food). Those
-        listings share the same shape but their category value will not be
-        wellness or counseling. Consumers of this contract should always
-        pass a category.
-      parameters:
-        - name: category
-          in: query
-          required: false
-          description: >
-            Which listing category to return. Matched case-insensitively and
-            trimmed, so `Wellness` and `wellness` behave identically. Omit to
-            return the full catalogue.
-          schema:
-            type: string
-            enum: [wellness, counseling]
-            example: wellness
+        Request counts, 4xx and 5xx counts, the error rate (5xx only), average
+        response time, and a breakdown per route pattern. Requests rejected
+        before reaching a route (401, 429, unknown paths) are grouped under
+        `(no route)`. The numbers live in memory and reset when the server
+        restarts. A reply does not count itself; it appears in the next one.
       responses:
+        '200':
+          description: Current totals
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stats'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
           $ref: '#/components/responses/TooManyRequests'
-        '200':
-          description: >
-            Listings matching the given category. The schemas below describe
-            the filtered responses this contract covers.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  oneOf:
-                    - $ref: '#/components/schemas/WellnessListing'
-                    - $ref: '#/components/schemas/CounselingListing'
-        '400':
-          description: category was supplied but is not one of the allowed values
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /listings/{id}:
-    get:
-      summary: Return full details for a single listing
-      description: >
-        Used to check a listing's current price and availability before
-        recommending it. An id belonging to a listing outside this
-        contract's categories returns the same shape with a different
-        category value.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: >
-            The listing's internal ID. Must be a positive integer; any other
-            value returns 404.
-          schema:
-            type: integer
-            example: 13
-      responses:
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-        '200':
-          description: Listing found
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/schemas/WellnessListing'
-                  - $ref: '#/components/schemas/CounselingListing'
-        '404':
-          description: No listing found with that ID
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /listings/{id}/availability:
-    patch:
-      summary: Update a listing's availability status
-      description: >
-        Called when a booking action in the Strathmore Mental Health App
-        consumes a listing (e.g. a doctor accepting an appointment tied to a
-        counseling listing, or a wellness item being claimed). Scoped to the
-        status field only; it cannot change a listing's title, price, or
-        description.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: >
-            The listing's internal ID. Must be a positive integer; any other
-            value returns 404.
-          schema:
-            type: integer
-            example: 17
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Availability'
-      responses:
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-        '200':
-          description: Availability status updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Availability'
-        '400':
-          description: status is missing or not one of the allowed values
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          description: No listing found with that ID
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /categories:
-    get:
-      summary: Return the list of available marketplace categories
-      responses:
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-        '200':
-          description: All available categories
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Category'
-
-  /categories/{id}:
-    get:
-      summary: Return a single category's details by ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: >
-            The category's internal ID. Must be a positive integer; any other
-            value returns 404.
-          schema:
-            type: integer
-            example: 8
-      responses:
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-        '200':
-          description: Category found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Category'
-        '404':
-          description: No category found with that ID
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
 components:
   securitySchemes:
@@ -267,7 +363,119 @@ components:
       description: >
         One key per consumer, issued privately by Group 8. Send it on every
         request.
+
+  parameters:
+    CategoryQuery:
+      name: category
+      in: query
+      required: false
+      description: >
+        Which listing category to return. Matched case-insensitively and
+        trimmed, so `Wellness` and `wellness` behave identically. Omit to
+        return the full catalogue.
+      schema:
+        type: string
+        enum: [wellness, counseling]
+        example: wellness
+    ListingId:
+      name: id
+      in: path
+      required: true
+      description: >
+        The listing's internal ID. Must be a positive integer; any other
+        value returns 404.
+      schema:
+        type: integer
+        example: 17
+    CategoryId:
+      name: id
+      in: path
+      required: true
+      description: >
+        The category's internal ID. Must be a positive integer; any other
+        value returns 404.
+      schema:
+        type: integer
+        example: 8
+
+  requestBodies:
+    Availability:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Availability'
+
+  headers:
+    Deprecation:
+      description: Always `true` on v1. This version is deprecated.
+      schema:
+        type: string
+        example: 'true'
+    Sunset:
+      description: The date v1 stops working.
+      schema:
+        type: string
+        example: 'Fri, 13 Nov 2026 00:00:00 GMT'
+    Link:
+      description: Where the replacement lives.
+      schema:
+        type: string
+        example: '</api/v2/listings>; rel="successor-version"'
+
   responses:
+    OneListing:
+      description: Listing found. Returned as the listing itself, not wrapped.
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/WellnessListing'
+              - $ref: '#/components/schemas/CounselingListing'
+    OneCategory:
+      description: Category found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Category'
+    AvailabilityUpdated:
+      description: Availability status updated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Availability'
+    BadCategory:
+      description: category was supplied but is not one of the allowed values
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'category must be one of: wellness, counseling (case-insensitive)'
+    BadStatus:
+      description: status is missing or not one of the allowed values, or the body is not valid JSON
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'status must be one of: available, booked (case-insensitive)'
+    ListingNotFound:
+      description: No listing found with that ID
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'Listing not found'
+    CategoryNotFound:
+      description: No category found with that ID
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'Category not found'
     Unauthorized:
       description: Missing or invalid API key.
       content:
@@ -299,7 +507,37 @@ components:
           example:
             error: 'Too many requests'
             retryAfter: 42
+
   schemas:
+    ListingPage:
+      type: object
+      description: The v2 shape of a list of listings.
+      properties:
+        data:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/WellnessListing'
+              - $ref: '#/components/schemas/CounselingListing'
+        count:
+          type: integer
+          description: How many listings are in `data`.
+          example: 4
+      required: [data, count]
+
+    CategoryPage:
+      type: object
+      description: The v2 shape of a list of categories.
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        count:
+          type: integer
+          example: 8
+      required: [data, count]
+
     WellnessListing:
       type: object
       description: A physical wellness or over-the-counter item for sale.
@@ -334,7 +572,7 @@ components:
           enum: [available, booked]
           description: >
             Current availability. Changed via
-            PATCH /listings/{id}/availability.
+            PATCH /v2/listings/{id}/availability.
           example: available
         imageUrl:
           type: string
@@ -399,7 +637,7 @@ components:
           enum: [available, booked]
           description: >
             Current availability. Changed via
-            PATCH /listings/{id}/availability.
+            PATCH /v2/listings/{id}/availability.
           example: available
         providerName:
           type: string
@@ -461,6 +699,60 @@ components:
             for display.
           example: wellness
       required: [id, label]
+
+    Stats:
+      type: object
+      properties:
+        startedAt:
+          type: string
+          format: date-time
+        uptimeSeconds:
+          type: integer
+        total:
+          type: integer
+          description: Every request that finished since the server started.
+        clientErrors:
+          type: integer
+          description: 4xx responses, usually the caller's mistake.
+        serverErrors:
+          type: integer
+          description: 5xx responses, our fault.
+        errorRatePercent:
+          type: number
+          description: serverErrors divided by total, as a percent.
+        avgMs:
+          type: number
+          description: Mean response time in milliseconds.
+        campushubFallbacks:
+          type: integer
+          description: Times our Clubs page was served saved data because CampusHub did not answer.
+        routes:
+          type: object
+          description: One entry per route pattern, for example `GET /api/v2/listings/:id`.
+          additionalProperties:
+            type: object
+            properties:
+              count:
+                type: integer
+              clientErrors:
+                type: integer
+              serverErrors:
+                type: integer
+              avgMs:
+                type: number
+              maxMs:
+                type: number
+      required:
+        [
+          startedAt,
+          uptimeSeconds,
+          total,
+          clientErrors,
+          serverErrors,
+          errorRatePercent,
+          avgMs,
+          routes,
+        ]
 
     Error:
       type: object

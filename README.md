@@ -2,57 +2,57 @@
 
 StrathShop is the campus marketplace for Strathmore University. This is its REST API: it returns marketplace **listings** (wellness items and bookable counseling sessions) and **categories** as JSON, and lets a partner app change one thing on a listing, whether it is `available` or `booked`. No student, session, or user-account data is exposed.
 
-- **Base URL (hosted):** `https://strathshop.onrender.com/api`
-- **Base URL (local):** `http://localhost:5000/api`, see [Run it locally](#run-it-locally)
+- **Base URL (hosted):** `https://strathshop.onrender.com/api/v2`
+- **Base URL (local):** `http://localhost:5000/api/v2`, see [Run it locally](#run-it-locally)
+- **Version:** v2. v1 is deprecated and stops working on **13 November 2026**, see [Versions](#versions).
 - **Format:** JSON in, JSON out. Prices are in KES and are always JSON numbers.
-- **Full reference:** [https://jkimanii.github.io/team8-webapp/](https://jkimanii.github.io/team8-webapp/)
+- **Full reference:** [https://jkimanii.github.io/team8-webapp/](https://jkimanii.github.io/team8-webapp/), also served by the API at `/docs/`
 
 ---
 
-## Quickstart (60 seconds)
+## Quickstart
 
-Copy, paste, run. Nothing to install and nothing to sign up for. However, you need an API key
+Nothing to install. You only need an API key (see [Authentication](#authentication)).
 
 ```bash
-curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/listings?category=wellness
+curl -H "X-API-Key: <your-api-key>" "https://strathshop.onrender.com/api/v2/listings?category=wellness"
 ```
 
 **The first request can take about a minute.** The hosted server sleeps after a quiet spell and wakes on the next request. Wait for it; later requests answer in under a second.
 
-You should get back `200 OK` and a JSON array of the wellness listings. The sample data has four (ids 13 to 16); the first is shown here:
+You should get back `200 OK` and the wellness listings, wrapped in `{ "data": [...], "count": N }`. The sample data has four (ids 13 to 16); the first is shown here:
 
 ```json
-[
-  {
-    "id": 13,
-    "title": "Ibuprofen 200mg (24 tablets)",
-    "price": 250,
-    "description": "Sealed box, unopened. For headaches and minor pain relief. Pickup at the campus pharmacy counter.",
-    "category": "wellness",
-    "condition": "Like New",
-    "status": "available",
-    "imageUrl": "https://placehold.co/400x300?text=Ibuprofen",
-    "sellerName": "Strathmore Campus Pharmacy",
-    "sellerCampus": "Strathmore University",
-    "datePosted": "2026-09-11T08:41:01.000Z"
-  }
-]
+{
+  "data": [
+    {
+      "id": 13,
+      "title": "Ibuprofen 200mg (24 tablets)",
+      "price": 250,
+      "description": "Sealed box, unopened. For headaches and minor pain relief. Pickup at the campus pharmacy counter.",
+      "category": "wellness",
+      "condition": "Like New",
+      "status": "available",
+      "imageUrl": "https://placehold.co/400x300?text=Ibuprofen",
+      "sellerName": "Strathmore Campus Pharmacy",
+      "sellerCampus": "Strathmore University",
+      "datePosted": "2026-09-11T08:41:01.000Z"
+    }
+  ],
+  "count": 4
+}
 ```
 
-If you got a JSON array back, the API works and everything below will too. If not, jump to [If something goes wrong](#if-something-goes-wrong).
+If you got that back, the API works and everything below will too. If not, jump to [If something goes wrong](#if-something-goes-wrong).
 
 ---
 
 ## Authentication
 
-## Authentication
-
-Every endpoint except `GET /api/health` needs an API key, sent in the
-`X-API-Key` header. Group 8 issues each consumer its own key, privately. If you
-don't have one, ask your Group 8 contact.
+Every endpoint except `GET /api/health` needs an API key, sent in the `X-API-Key` header. Group 8 issues each consumer its own key, privately. If you don't have one, ask your Group 8 contact.
 
 ```bash
-curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/listings?category=wellness
+curl -H "X-API-Key: <your-api-key>" "https://strathshop.onrender.com/api/v2/listings?category=wellness"
 ```
 
 | Situation                                                   | Response                                                                                    |
@@ -63,8 +63,33 @@ curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/listings
 
 ## Rate limit
 
-100 requests per minute per key. When you go over, wait the number of seconds in
-the `Retry-After` header before trying again.
+100 requests per minute per key. When you go over, wait the number of seconds in the `Retry-After` header before trying again.
+
+---
+
+## Versions
+
+**Use v2.** Its URLs start with `/api/v2`.
+
+The only difference between the versions: in v2, the two **list** endpoints wrap the list.
+
+| Request           | v1 (deprecated)    | v2                                         |
+| ----------------- | ------------------ | ------------------------------------------ |
+| `GET /listings`   | `[ {...}, {...} ]` | `{ "data": [ {...}, {...} ], "count": 2 }` |
+| `GET /categories` | `[ {...}, {...} ]` | `{ "data": [ {...}, {...} ], "count": 2 }` |
+| Everything else   | unchanged          | unchanged                                  |
+
+Single listings, single categories, the PATCH and errors look exactly the same in both versions, and the fields inside each listing are identical.
+
+**v1 is deprecated and stops working on 13 November 2026.** Until then it still answers at `/api/v1/...` and at the old unversioned `/api/...` URLs, with exactly the old shape. Every v1 response carries three headers that say so:
+
+```
+Deprecation: true
+Sunset: Fri, 13 Nov 2026 00:00:00 GMT
+Link: </api/v2/listings>; rel="successor-version"
+```
+
+**Moving from v1 to v2** takes two changes: add `/v2` to your base URL, and read the list from `body.data` instead of `body`. Your key and the `?category=` filter stay the same. See [`DEPRECATION_NOTICE.md`](DEPRECATION_NOTICE.md) for the full notice.
 
 ---
 
@@ -76,15 +101,15 @@ the `Retry-After` header before trying again.
 - **IDs are positive integers.** Anything else (`/listings/abc`, `/listings/-1`) returns `404`, not `400`.
 - **Two listing shapes.** `wellness` listings are physical items. `counseling` listings are bookable services and carry an extra `providerName` field; their `condition` is always `"N/A"`.
 - **Times are UTC.** `datePosted` ends in `Z`, which means UTC. Nairobi time (EAT) is UTC+3, so `2026-09-11T08:41:01.000Z` is 11:41 on 11 September in Nairobi.
-- **Lists can be longer than the examples.** The examples below show the first listing of each list to keep this page short. The sample data has four wellness listings (ids 13 to 16) and four counseling listings (ids 17 to 20).
+- **Lists can be longer than the examples.** The examples below show the first item of each list to keep this page short; `count` tells you how many there are. The sample data has four wellness listings (ids 13 to 16) and four counseling listings (ids 17 to 20).
 
 ---
 
 ## Endpoints
 
-All examples use the hosted server. They use macOS/Linux/Git Bash syntax; see [Windows note](#windows-note) for `cmd.exe` and PowerShell. To use your own copy instead, swap `https://strathshop.onrender.com` for `http://localhost:5000`.
+All examples use the hosted server and v2. They use macOS/Linux/Git Bash syntax; see [Windows note](#windows-note) for `cmd.exe` and PowerShell. To use your own copy instead, swap `https://strathshop.onrender.com` for `http://localhost:5000`.
 
-| Method | Path                                          | What it does                           |
+| Method | Path (after `/api/v2`)                        | What it does                           |
 | ------ | --------------------------------------------- | -------------------------------------- |
 | GET    | `/listings?category=wellness` or `counseling` | List listings in a category            |
 | GET    | `/listings/{id}`                              | Get one listing                        |
@@ -95,28 +120,31 @@ All examples use the hosted server. They use macOS/Linux/Git Bash syntax; see [W
 ### 1. List listings by category
 
 ```bash
-curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/listings?category=counseling
+curl -H "X-API-Key: <your-api-key>" "https://strathshop.onrender.com/api/v2/listings?category=counseling"
 ```
 
-**200 OK**: an array of the four counseling listings (ids 17 to 20). The first is shown:
+**200 OK**: the four counseling listings (ids 17 to 20), wrapped. The first is shown:
 
 ```json
-[
-  {
-    "id": 17,
-    "title": "1-on-1 Counseling Session",
-    "price": 1500,
-    "description": "50-minute confidential session with a licensed campus counselor. Weekdays, by appointment.",
-    "category": "counseling",
-    "condition": "N/A",
-    "status": "available",
-    "providerName": "Dr. Wanjiku Mwangi",
-    "imageUrl": "https://placehold.co/400x300?text=Counseling+Session",
-    "sellerName": "Dr. Wanjiku Mwangi",
-    "sellerCampus": "Strathmore University",
-    "datePosted": "2026-09-11T08:50:22.000Z"
-  }
-]
+{
+  "data": [
+    {
+      "id": 17,
+      "title": "1-on-1 Counseling Session",
+      "price": 1500,
+      "description": "50-minute confidential session with a licensed campus counselor. Weekdays, by appointment.",
+      "category": "counseling",
+      "condition": "N/A",
+      "status": "available",
+      "imageUrl": "https://placehold.co/400x300?text=Counseling+Session",
+      "sellerName": "Dr. Wanjiku Mwangi",
+      "sellerCampus": "Strathmore University",
+      "datePosted": "2026-09-11T08:50:22.000Z",
+      "providerName": "Dr. Wanjiku Mwangi"
+    }
+  ],
+  "count": 4
+}
 ```
 
 An unrecognised category returns `400` (see [Errors](#errors)).
@@ -124,10 +152,10 @@ An unrecognised category returns `400` (see [Errors](#errors)).
 ### 2. Get one listing
 
 ```bash
-curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/listings/13
+curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/v2/listings/13
 ```
 
-**200 OK**: the same object shape as in the lists above, but a single object, not an array:
+**200 OK**: a single listing, not wrapped:
 
 ```json
 {
@@ -149,10 +177,10 @@ Use this to check a listing's current `price` and `status` before recommending i
 
 ### 3. Update a listing's availability
 
-This is the only write endpoint. It changes `status` and nothing else (it cannot edit a title, price or description). It changes the live data, so undo your test afterwards.
+This is the only write endpoint. It changes `status` and nothing else (it cannot edit a title, price or description). It changes the live data, so undo your test afterwards. Sending the same request twice succeeds both times.
 
 ```bash
-curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api/listings/17/availability \
+curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api/v2/listings/17/availability \
   -H "Content-Type: application/json" \
   -d '{"status": "booked"}'
 ```
@@ -166,7 +194,7 @@ curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api
 `status` must be `available` or `booked` (any capitalisation, surrounding spaces ignored). To undo the example above:
 
 ```bash
-curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api/listings/17/availability \
+curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api/v2/listings/17/availability \
   -H "Content-Type: application/json" \
   -d '{"status": "available"}'
 ```
@@ -174,28 +202,31 @@ curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api
 ### 4. List all categories
 
 ```bash
-curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/categories
+curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/v2/categories
 ```
 
-**200 OK**: an array of `{ id, label }` objects, one per category. `label` is lowercase and is the exact value the `?category=` filter expects:
+**200 OK**: every category, wrapped. `label` is lowercase and is the exact value the `?category=` filter expects:
 
 ```json
-[
-  { "id": 1, "label": "textbooks" },
-  { "id": 2, "label": "electronics" },
-  { "id": 3, "label": "fashion" },
-  { "id": 4, "label": "furniture" },
-  { "id": 5, "label": "services" },
-  { "id": 6, "label": "food" },
-  { "id": 8, "label": "wellness" },
-  { "id": 9, "label": "counseling" }
-]
+{
+  "data": [
+    { "id": 1, "label": "textbooks" },
+    { "id": 2, "label": "electronics" },
+    { "id": 3, "label": "fashion" },
+    { "id": 4, "label": "furniture" },
+    { "id": 5, "label": "services" },
+    { "id": 6, "label": "food" },
+    { "id": 8, "label": "wellness" },
+    { "id": 9, "label": "counseling" }
+  ],
+  "count": 8
+}
 ```
 
 ### 5. Get one category
 
 ```bash
-curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/categories/8
+curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/v2/categories/8
 ```
 
 **200 OK**
@@ -208,7 +239,7 @@ curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/categori
 
 ## Errors
 
-Every failed request returns a non-2xx status code and a JSON body with a single `error` field:
+Every failed request returns a non-2xx status code and a JSON body with a single `error` field (a `429` adds `retryAfter`):
 
 ```json
 { "error": "Listing not found" }
@@ -218,16 +249,16 @@ To tell success from failure, check the HTTP status code first. The `error` text
 
 | Status                  | When it happens                                                                                                                        | Example request                                                   |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `400 Bad Request`       | `category` is not `wellness` or `counseling`; or `status` is missing or not `available`/`booked`; or the request body isn’t valid JSON | `GET /listings?category=pizza`                                    |
-| `404 Not Found`         | No listing or category with that id, or the id isn't a positive integer                                                                | `GET /listings/9999`                                              |
+| `400 Bad Request`       | `category` is not `wellness` or `counseling`; or `status` is missing or not `available`/`booked`; or the request body isn't valid JSON | `GET /listings?category=pizza`                                    |
 | `401 Unauthorized`      | The `X-API-Key` header is missing or wrong                                                                                             | `GET /listings/13` (any request sent with no key)                 |
 | `403 Forbidden`         | The key is valid but read-only, and the request changes data                                                                           | `PATCH /listings/17/availability` (sent with a read-only key)     |
+| `404 Not Found`         | No listing or category with that id, or the id isn't a positive integer                                                                | `GET /listings/9999`                                              |
 | `429 Too Many Requests` | More than 100 requests in a minute with one key                                                                                        | `GET /listings?category=wellness` (the 101st request in a minute) |
 
 Real example, a listing that doesn't exist:
 
 ```bash
-curl -H "X-API-Key: <your-api-key>" -i https://strathshop.onrender.com/api/listings/9999
+curl -H "X-API-Key: <your-api-key>" -i https://strathshop.onrender.com/api/v2/listings/9999
 ```
 
 `404 Not Found`
@@ -261,12 +292,19 @@ curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/stats
   "avgMs": 8.4,
   "campushubFallbacks": 1,
   "routes": {
-    "GET /api/listings/:id": {
+    "GET /api/v2/listings/:id": {
       "count": 40,
       "clientErrors": 6,
       "serverErrors": 0,
       "avgMs": 3.9,
       "maxMs": 21.4
+    },
+    "GET /api/listings": {
+      "count": 7,
+      "clientErrors": 0,
+      "serverErrors": 0,
+      "avgMs": 5.2,
+      "maxMs": 9.8
     },
     "GET (no route)": {
       "count": 12,
@@ -280,11 +318,13 @@ curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/stats
 ```
 
 - `clientErrors` are 4xx (usually the caller's mistake) and `serverErrors` are 5xx (ours). `errorRatePercent` counts 5xx only.
-- `routes` groups requests by route pattern, so `/listings/13` and `/listings/14` share the `GET /api/listings/:id` row. `(no route)` holds requests rejected before reaching a route: a 401, a 429, or a path that doesn't exist.
+- `routes` groups requests by route pattern, so `/listings/13` and `/listings/14` share one row. Each version has its own rows: `GET /api/listings` (old URL), `GET /api/v1/listings` and `GET /api/v2/listings`, which shows who is still on v1. `(no route)` holds requests rejected before reaching a route: a 401, a 429, or a path that doesn't exist.
 - `campushubFallbacks` counts how often the Clubs page was served saved data because CampusHub didn't answer.
 - The numbers live in the server's memory, so they reset when it restarts.
 
 The example numbers above are illustrative; yours will differ.
+
+---
 
 ## Run it locally
 
@@ -329,26 +369,26 @@ npm install
 cp .env.example .env
 ```
 
-Then open `server/.env` and set `API_KEYS` to one or more `name:key` pairs, for example
-`API_KEYS=me:<a-long-random-key>`.
+On Windows `cmd.exe`, use `copy .env.example .env` instead of `cp`. Then open `server/.env` and:
 
-Every local request then needs `-H "X-API-Key: <that-key>"`.
+- set `DB_PASSWORD` to your MySQL password, and `DB_PORT` if your MySQL isn't on the default 3306;
+- set `API_KEYS` to one or more `name:key` pairs, for example `API_KEYS=me:<a-long-random-key>`. Make a key with `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`.
 
-On Windows `cmd.exe`, use `copy .env.example .env` instead of `cp`. Then open `server/.env` and set `DB_PASSWORD` to your MySQL password. If your MySQL isn't on the default port 3306, also change `DB_PORT`. Leave the other values as they are.
+Leave the other values as they are. Every local request then needs `-H "X-API-Key: <that-key>"`.
 
 ```bash
 npm start
 ```
 
-(`npm run dev` does the same but restarts when you change the code.) The terminal should show that the server is running on port 5000.
+(`npm run dev` does the same but restarts when you change the code.) The terminal should show how many API keys loaded and that the server is running on port 5000.
 
 **5. Check it works**
 
 ```bash
-curl -H "X-API-Key: <your-api-key>" http://localhost:5000/api/listings?category=wellness
+curl -H "X-API-Key: <your-api-key>" "http://localhost:5000/api/v2/listings?category=wellness"
 ```
 
-If that returns a JSON array, you're done. To stop the server, press Ctrl-C.
+If that returns `{ "data": [...], "count": 4 }`, you're done. To stop the server, press Ctrl-C.
 
 **6. The website (optional).** The repo also holds the StrathShop front end, which needs the server from step 4 to be running. In a second terminal, from the repo folder:
 
@@ -358,7 +398,7 @@ npm install
 cp .env.local.example .env.local
 ```
 
-Then open `client/.env.local` and set `VITE_API_KEY` to `your-website-api-key`.
+Then open `client/.env.local` and set `VITE_API_KEY` to the read-only website key (the consumer named in `READ_ONLY_CONSUMERS` in `server/.env`).
 
 ```bash
 npm run dev
@@ -371,7 +411,7 @@ Then open `http://localhost:5173`.
 In `cmd.exe`, single quotes don't work and JSON needs escaped double quotes. The PATCH example becomes:
 
 ```bat
-curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api/listings/17/availability -H "Content-Type: application/json" -d "{\"status\": \"booked\"}"
+curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api/v2/listings/17/availability -H "Content-Type: application/json" -d "{\"status\": \"booked\"}"
 ```
 
 In PowerShell, `curl` is a different command with different options. Type `curl.exe` instead, or run the commands in Git Bash. For the PATCH request in PowerShell, Git Bash is the easier route.
@@ -388,9 +428,11 @@ In PowerShell, `curl` is a different command with different options. Type `curl.
 | `Access denied for user 'root'`                                  | Wrong `DB_PASSWORD`                                          | Fix it in `server/.env`, then stop the server with Ctrl-C and run `npm start` again                              |
 | `Unknown database 'strathshop'`                                  | Step 2 was skipped, or `DB_NAME` doesn't match               | Create the database; check `DB_NAME` in `.env`                                                                   |
 | `Table 'strathshop.listings' doesn't exist`                      | `schema.sql` wasn't run                                      | Run step 3                                                                                                       |
-| `200` but an empty array `[]`                                    | `seed.sql` wasn't run                                        | Run `seed.sql`                                                                                                   |
+| `200` but `"data": []` and `"count": 0`                          | `seed.sql` wasn't run                                        | Run `seed.sql`                                                                                                   |
 | `Duplicate entry ... for key 'PRIMARY'` while running `seed.sql` | The sample data is already loaded                            | Run `schema.sql` first to reset, then `seed.sql`                                                                 |
 | `mysql` is not recognised                                        | The MySQL program isn't on your PATH                         | Run it by its full path (see Run it locally), or add its folder to your PATH                                     |
+| Your code says `.map is not a function` on our response          | You called v2 but still treat the body as a list             | Read the list from `body.data` (see [Versions](#versions))                                                       |
+| A list comes back as a bare `[...]` with a `Deprecation` header  | You are calling v1 (`/api/...` or `/api/v1/...`)             | Add `/v2` to your base URL                                                                                       |
 | `400` on a category you're sure is valid                         | Typo, or a category outside `wellness` / `counseling`        | Check spelling; see `GET /categories`                                                                            |
 | `404` on an id that looks right                                  | The id isn't in the database, or it isn't a plain integer    | Try `GET /listings?category=wellness` to see real ids                                                            |
 | `401` on every call                                              | Header name wrong, key wrong, or `API_KEYS` not loaded       | The header is exactly `X-API-Key`; check `server/.env`; the server prints how many keys it loaded when it starts |

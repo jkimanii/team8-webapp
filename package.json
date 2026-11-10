@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "docs": "npx redocly build-docs ./openapi.yaml --output ./docs/index.html --title \"StrathShop API Docs\""
+    "docs": "npx @redocly/cli build-docs openapi.yaml --output docs/index.html --title \"StrathShop API Docs\""
   },
   "devDependencies": {
     "jest": "^30.5.2",
