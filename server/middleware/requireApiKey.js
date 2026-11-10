@@ -49,7 +49,9 @@ function loadConsumers() {
     // Only the count and the names, never the keys.
     console.log(
       `API keys loaded: ${consumers.length} (${
-        consumers.map((c) => c.name + (c.readOnly ? ' [read-only]' : '')).join(', ') || 'none'
+        consumers
+          .map((c) => c.name + (c.readOnly ? ' [read-only]' : ''))
+          .join(', ') || 'none'
       })`
     );
   }
@@ -61,7 +63,9 @@ function requireApiKey(req, res, next) {
 
   if (list.length === 0) {
     // Fail closed: a missing setting must never mean "no key needed".
-    console.error('API_KEYS is empty or malformed: refusing all keyed requests');
+    console.error(
+      'API_KEYS is empty or malformed: refusing all keyed requests'
+    );
     return res.status(500).json({ error: 'Server is not configured' });
   }
 
@@ -76,16 +80,23 @@ function requireApiKey(req, res, next) {
   }
 
   if (!match) {
-    console.warn(`401 ${req.method} ${req.originalUrl} from ${req.ip} (missing or invalid API key)`);
+    console.warn(
+      `401 ${req.method} ${req.originalUrl.split('?')[0]} from ${req.ip} (missing or invalid API key)`
+    );
     return res.status(401).json({ error: 'Missing or invalid API key' });
   }
 
   req.consumer = { name: match.name, readOnly: match.readOnly };
+  // For monitoring.js, which logs a 6-character hash of it, never the key.
+  // Only set for a VALID key, so a wrong key is logged as caller "none".
+  req.apiKey = provided;
 
   // 401 = "I don't know who you are". 403 = "I know who you are, and this
   // key is not allowed to do that".
   if (match.readOnly && !['GET', 'HEAD'].includes(req.method)) {
-    console.warn(`403 ${req.method} ${req.originalUrl} (${match.name} is read-only)`);
+    console.warn(
+      `403 ${req.method} ${req.originalUrl.split('?')[0]} (${match.name} is read-only)`
+    );
     return res.status(403).json({ error: 'This API key is read-only' });
   }
 

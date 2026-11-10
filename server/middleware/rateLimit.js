@@ -21,7 +21,11 @@ function rateLimit({ windowMs = 60000, max = 100 } = {}) {
     // ships inside the website's JavaScript and every visitor shares it), so
     // it is counted per visitor instead, or one busy visitor would use up
     // everyone's allowance. No key at all: count by IP.
-    const id = c ? (c.readOnly ? `${c.name}:${req.ip}` : c.name) : `ip:${req.ip}`;
+    const id = c
+      ? c.readOnly
+        ? `${c.name}:${req.ip}`
+        : c.name
+      : `ip:${req.ip}`;
 
     const now = Date.now();
     let entry = hits.get(id);
@@ -35,7 +39,9 @@ function rateLimit({ windowMs = 60000, max = 100 } = {}) {
     if (entry.count > max) {
       const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
       res.set('Retry-After', String(retryAfter));
-      console.warn(`429 ${req.method} ${req.originalUrl} (${c ? c.name : 'no key'})`);
+      console.warn(
+        `429 ${req.method} ${req.originalUrl.split('?')[0]} (${c ? c.name : 'no key'})`
+      );
       return res.status(429).json({ error: 'Too many requests', retryAfter });
     }
 

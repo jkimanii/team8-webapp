@@ -6,6 +6,7 @@ require('dotenv').config();
 const db = require('./db');
 const requireApiKey = require('./middleware/requireApiKey');
 const rateLimit = require('./middleware/rateLimit');
+const { monitor, statsHandler } = require('./middleware/monitoring');
 
 const app = express();
 
@@ -13,8 +14,18 @@ const app = express();
 // same IP to the rate limiter.
 app.set('trust proxy', 1);
 
+// FIRST, before anything that can reject a request, so 401s, 429s, bad JSON
+// and unknown paths are all logged and counted too.
+app.use(monitor);
+
 app.use(cors());
 app.use(express.json());
+
+// Public on purpose: static docs and the contract. No data behind them.
+app.use('/docs', express.static(path.join(__dirname, '..', 'docs')));
+app.get('/openapi.yaml', (req, res) =>
+  res.sendFile(path.join(__dirname, '..', 'openapi.yaml'))
+);
 
 app.get('/', (req, res) => {
   res.type('html').send(`
@@ -55,6 +66,9 @@ app.use(
     max: Number(process.env.RATE_LIMIT_MAX) || 100,
   })
 );
+
+// Behind the key check, like everything else under /api.
+app.get('/api/stats', statsHandler);
 
 const listingRoutes = require('./routes/listings');
 const categoryRoutes = require('./routes/categories');

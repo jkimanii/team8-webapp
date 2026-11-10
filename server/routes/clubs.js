@@ -1,6 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const { fetchWithRetry } = require('../resilientFetch');
+const { countFallback } = require('../middleware/monitoring');
+
+/*
+Our side of the integration with Team 7 (CampusHub). The browser never talks to
+CampusHub directly: it calls these routes and this server calls CampusHub.
+
+server/.env:
+  CAMPUSHUB_URL      their base URL including /api
+  CAMPUSHUB_API_KEY  the key Team 7 issued to us
+  DEBUG_PARTNER      true = print the raw partner response while building
+
+  Resilience (all optional, these are the defaults):
+  CAMPUSHUB_TIMEOUT_MS=1500        give up on one attempt after this long
+  CAMPUSHUB_RETRIES=2              retries after the first attempt
+  CAMPUSHUB_RETRY_DELAY_MS=200     first wait; doubles each time (200, 400)
+*/
 
 // Read at call time, so a changed .env is picked up after a restart and tests
 // can point the proxy elsewhere.
@@ -32,6 +48,9 @@ function remember(path, result) {
   lastGood.set(path, { result, asOf: new Date().toISOString() });
   if (lastGood.size > MAX_SAVED) lastGood.delete(lastGood.keys().next().value);
 }
+
+// Logs never carry query strings: ?search= is whatever a visitor typed.
+const noQuery = (p) => p.split('?')[0];
 
 function buildQuery(query, allowed) {
   const params = new URLSearchParams();
@@ -124,8 +143,9 @@ function buildPage(body, listKey, mapper, required, kind) {
 function fallback(res, path, reason) {
   const saved = lastGood.get(path);
   if (saved) {
+    countFallback(); // Week 12 stretch: shows in /api/stats as campushubFallbacks
     console.warn(
-      `serving saved data for ${path} from ${saved.asOf} (${reason})`
+      `serving saved data for ${noQuery(path)} from ${saved.asOf} (${reason})`
     );
     return res.json({ ...saved.result, stale: true, asOf: saved.asOf });
   }
@@ -171,7 +191,7 @@ async function forward(path, res, build) {
     }
 
     if (!upstream.ok) {
-      console.error('partner returned', upstream.status, path);
+      console.error('partner returned', upstream.status, noQuery(path));
       // 400 and 404 are about the request itself, so the page can show them
       // as they are. Anything else (401, 429, 5xx) is a problem between the
       // two servers: serve saved data if we have it. The log above is how we
@@ -188,7 +208,10 @@ async function forward(path, res, build) {
 
     const result = body && typeof body === 'object' ? build(body) : null;
     if (!result) {
-      console.error('partner returned a response we could not read', path);
+      console.error(
+        'partner returned a response we could not read',
+        noQuery(path)
+      );
       return fallback(res, path, 'unreadable response');
     }
 
@@ -202,7 +225,7 @@ async function forward(path, res, build) {
     // timeout, ECONNREFUSED (nothing listening) or ENOTFOUND (wrong hostname)
     const reason =
       err.name === 'TimeoutError' ? 'timeout' : err.cause?.code || err.message;
-    console.error('partner call failed:', reason, path);
+    console.error('partner call failed:', reason, noQuery(path));
     return fallback(res, path, reason);
   }
 }

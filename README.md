@@ -240,6 +240,52 @@ The `-i` makes curl print the status line and headers before the body, which is 
 
 ---
 
+## Monitoring: `/api/stats`
+
+`GET /api/stats` reports running totals for the API since the server last started. It needs a key like every other endpoint.
+
+```bash
+curl -H "X-API-Key: <your-api-key>" https://strathshop.onrender.com/api/stats
+```
+
+**200 OK**
+
+```json
+{
+  "startedAt": "2026-11-10T08:23:08.808Z",
+  "uptimeSeconds": 3600,
+  "total": 120,
+  "clientErrors": 18,
+  "serverErrors": 0,
+  "errorRatePercent": 0,
+  "avgMs": 8.4,
+  "campushubFallbacks": 1,
+  "routes": {
+    "GET /api/listings/:id": {
+      "count": 40,
+      "clientErrors": 6,
+      "serverErrors": 0,
+      "avgMs": 3.9,
+      "maxMs": 21.4
+    },
+    "GET (no route)": {
+      "count": 12,
+      "clientErrors": 12,
+      "serverErrors": 0,
+      "avgMs": 0.8,
+      "maxMs": 1.6
+    }
+  }
+}
+```
+
+- `clientErrors` are 4xx (usually the caller's mistake) and `serverErrors` are 5xx (ours). `errorRatePercent` counts 5xx only.
+- `routes` groups requests by route pattern, so `/listings/13` and `/listings/14` share the `GET /api/listings/:id` row. `(no route)` holds requests rejected before reaching a route: a 401, a 429, or a path that doesn't exist.
+- `campushubFallbacks` counts how often the Clubs page was served saved data because CampusHub didn't answer.
+- The numbers live in the server's memory, so they reset when it restarts.
+
+The example numbers above are illustrative; yours will differ.
+
 ## Run it locally
 
 You only need this if you want your own copy. The hosted URL above needs no setup.
