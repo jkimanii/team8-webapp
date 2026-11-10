@@ -70,12 +70,17 @@ app.use(
 // Behind the key check, like everything else under /api.
 app.get('/api/stats', statsHandler);
 
-const listingRoutes = require('./routes/listings');
-const categoryRoutes = require('./routes/categories');
+const v1 = require('./routes/v1');
+const v2 = require('./routes/v2');
 const clubRoutes = require('./routes/clubs');
 
-app.use('/api/listings', listingRoutes);
-app.use('/api/categories', categoryRoutes);
+// All three sit BELOW the key check above, so v2 needs a key too.
+app.use('/api/v2', v2); // the new version
+app.use('/api/v1', v1); // the old version, still running
+app.use('/api', v1); // old URLs with no version (/api/listings) keep working
+
+// Our own proxy to CampusHub, used by our website only: not part of the
+// contract with Group 9, so it is not versioned.
 app.use('/api/clubs', clubRoutes);
 
 // Errors are JSON too, and never a stack trace or a file path.
