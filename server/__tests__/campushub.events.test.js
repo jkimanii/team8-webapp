@@ -10,11 +10,11 @@ const api = () => request(CAMPUSHUB_URL);
 const withKey = (req) => req.set('X-API-Key', CAMPUSHUB_API_KEY);
 
 // Write tests need the shared secret from Team 7.
-const describeWrites = API_KEY ? describe : describe.skip;
-if (!API_KEY) {
+const describeWrites = CAMPUSHUB_API_KEY ? describe : describe.skip;
+if (!CAMPUSHUB_API_KEY) {
   console.warn(
-    '\n  CAMPUSHUB_KEY not set - POST/PUT/DELETE tests skipped.\n' +
-      '  Ask Team 7 for the key, then re-run with CAMPUSHUB_KEY=<key>.\n'
+    '\n  CAMPUSHUB_API_KEY not set - POST/PUT/DELETE tests skipped.\n' +
+      '  Ask Team 7 for the key, then re-run with CAMPUSHUB_API_KEY=<key>.\n'
   );
 }
 
