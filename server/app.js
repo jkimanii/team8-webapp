@@ -29,14 +29,8 @@ app.get('/openapi.yaml', (req, res) =>
 
 app.get('/', (req, res) => {
   res.type('html').send(`
-    <h1>StrathShop API</h1>
-    <p>All endpoints live under <code>/api</code> and need an
-    <code>X-API-Key</code> header.</p>
-    <ul>
-      <li><a href="/docs/">API documentation</a></li>
-      <li><a href="/openapi.yaml">OpenAPI contract</a></li>
-      <li><a href="/api/health">Health check</a></li>
-    </ul>`);
+    <p>StrathShop API live</p>
+    `);
 });
 
 // The one public API endpoint: no data, no parameters, and it is what the
