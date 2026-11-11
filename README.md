@@ -185,6 +185,14 @@ curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api
   -d '{"status": "booked"}'
 ```
 
+or for Windows powershell
+
+```bash
+curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api/v2/listings/17/availability `
+  -H "Content-Type: application/json" `
+  -d '{"status": "booked"}'
+```
+
 **200 OK**: echoes the new status, lowercase:
 
 ```json
@@ -196,6 +204,14 @@ curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api
 ```bash
 curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api/v2/listings/17/availability \
   -H "Content-Type: application/json" \
+  -d '{"status": "available"}'
+```
+
+or for Windows powershell
+
+```bash
+curl -H "X-API-Key: <your-api-key>" -X PATCH https://strathshop.onrender.com/api/v2/listings/17/availability `
+  -H "Content-Type: application/json" `
   -d '{"status": "available"}'
 ```
 
