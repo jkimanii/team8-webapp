@@ -160,12 +160,10 @@ function fallback(res, path, reason) {
 async function forward(path, res, build) {
   if (!baseUrl()) {
     console.error('CAMPUSHUB_URL is not set');
-    return res
-      .status(500)
-      .json({
-        error: 'server_misconfigured',
-        message: 'Partner data unavailable',
-      });
+    return res.status(500).json({
+      error: 'server_misconfigured',
+      message: 'Partner data unavailable',
+    });
   }
 
   try {
@@ -239,12 +237,10 @@ function partnerVersion(res) {
     return partner.current();
   } catch (err) {
     console.error(err.message);
-    res
-      .status(500)
-      .json({
-        error: 'server_misconfigured',
-        message: 'Partner data unavailable',
-      });
+    res.status(500).json({
+      error: 'server_misconfigured',
+      message: 'Partner data unavailable',
+    });
     return null;
   }
 }
@@ -299,4 +295,59 @@ router.get('/:id', (req, res) =>
   })
 );
 
+// GET /api/clubs/image?src=<CampusHub image URL>
+// An <img> tag can't send headers, so the browser gets ngrok's warning page
+// instead of the picture. We fetch it with the skip header and pass it on.
+// Only CampusHub's own host is allowed, so this can't fetch anything else.
+async function imageProxy(req, res) {
+  let src;
+  try {
+    src = new URL(String(req.query.src || ''));
+  } catch {
+    return res
+      .status(400)
+      .json({ error: 'bad_request', message: 'src must be a full URL' });
+  }
+  if (!baseUrl() || src.origin !== new URL(baseUrl()).origin) {
+    return res.status(400).json({
+      error: 'bad_request',
+      message: 'Only CampusHub images are allowed',
+    });
+  }
+
+  try {
+    const upstream = await fetchWithRetry(
+      src.toString(),
+      { headers: { 'ngrok-skip-browser-warning': 'true' } },
+      { timeoutMs: timeoutMs(), retries: 1, delayMs: retryDelayMs() }
+    );
+    const type = upstream.headers.get('content-type') || '';
+    if (!upstream.ok || !type.startsWith('image/')) {
+      console.warn(
+        'image proxy: CampusHub returned',
+        upstream.status,
+        type,
+        src.pathname
+      );
+      return res.status(502).end();
+    }
+    res.set({
+      'Content-Type': type,
+      'Cache-Control': 'public, max-age=3600',
+      'X-Content-Type-Options': 'nosniff',
+      // SVGs can contain scripts; this stops them running if opened directly.
+      'Content-Security-Policy':
+        "default-src 'none'; style-src 'unsafe-inline'",
+    });
+    return res.send(Buffer.from(await upstream.arrayBuffer()));
+  } catch (err) {
+    console.warn(
+      'image proxy failed:',
+      err.name === 'TimeoutError' ? 'timeout' : err.cause?.code || err.message
+    );
+    return res.status(502).end();
+  }
+}
+
 module.exports = router;
+module.exports.imageProxy = imageProxy;

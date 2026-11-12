@@ -11,3 +11,7 @@ export function apiFetch(path, options = {}) {
     },
   });
 }
+
+// CampusHub pictures go through our server (see /api/clubs/image).
+export const imageUrl = (src) =>
+  src ? `${API}/clubs/image?src=${encodeURIComponent(src)}` : null;

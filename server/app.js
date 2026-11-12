@@ -49,6 +49,15 @@ app.get(
   }
 );
 
+// Club and event pictures from CampusHub. Public because an <img> tag can't
+// send our API key; it only ever fetches CampusHub's own images.
+const { imageProxy } = require('./routes/clubs');
+app.get(
+  '/api/clubs/image',
+  rateLimit({ windowMs: 60000, max: 120 }),
+  imageProxy
+);
+
 // Everything registered below this line needs a valid key. Order matters:
 // this must come BEFORE the routes, or they would be open.
 requireApiKey.loadConsumers(); // logs how many keys loaded (never the keys)

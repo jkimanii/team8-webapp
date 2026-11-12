@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import ClubCard from '../components/ClubCard';
 import StaleBanner from '../components/StaleBanner';
-import { apiFetch } from '../api';
+import { apiFetch, imageUrl } from '../api';
 import './Clubs.css';
 
 const CLUBS_PATH = '/clubs';
@@ -382,9 +382,12 @@ function Clubs() {
                   <article key={event.id} className="event-card">
                     {event.imageUrl && (
                       <img
-                        src={event.imageUrl}
+                        src={imageUrl(event.imageUrl)}
                         alt={event.title}
                         className="event-card-image"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
                     )}
                     <div className="event-card-body">

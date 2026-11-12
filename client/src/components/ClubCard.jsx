@@ -1,4 +1,6 @@
 import './ClubCard.css';
+import { useState } from 'react';
+import { imageUrl } from '../api';
 
 // Build initials for clubs with no logo (logoUrl is nullable in the contract).
 function initials(name) {
@@ -21,11 +23,18 @@ function ClubCard({ club }) {
     tags,
   } = club;
 
+  const [logoFailed, setLogoFailed] = useState(false);
+
   return (
     <article className="club-card">
       <div className="club-card-header">
-        {logoUrl ? (
-          <img src={logoUrl} alt="" className="club-logo" />
+        {logoUrl && !logoFailed ? (
+          <img
+            src={imageUrl(logoUrl)}
+            alt=""
+            className="club-logo"
+            onError={() => setLogoFailed(true)}
+          />
         ) : (
           <div className="club-logo club-logo-fallback" aria-hidden="true">
             {initials(name)}
