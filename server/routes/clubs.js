@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { fetchWithRetry } = require('../resilientFetch');
 const { countFallback } = require('../middleware/monitoring');
+const partner = require('../partner');
 
 /*
 Our side of the integration with Team 7 (CampusHub). The browser never talks to
@@ -35,7 +36,8 @@ const CLUB_PARAMS = ['search', 'category', 'page', 'limit'];
 const EVENT_PARAMS = ['clubId', 'from', 'to', 'page', 'limit'];
 
 const CLUB_REQUIRED = ['id', 'name', 'category'];
-const EVENT_REQUIRED = ['id', 'clubId', 'title', 'startTime'];
+// The event's time is checked by the version's parser in partner.js.
+const EVENT_REQUIRED = ['id', 'clubId', 'title'];
 
 // The last good answer for each request, kept in memory. When CampusHub cannot
 // be reached we serve it, flagged `stale`, so the page can say so. It is gone
@@ -230,22 +232,56 @@ async function forward(path, res, build) {
   }
 }
 
-// Events first: "/events" must not be read as a club id by "/:id".
-// GET /api/clubs/events -> CampusHub GET /events
-router.get('/events', (req, res) =>
-  forward(`/events${buildQuery(req.query, EVENT_PARAMS)}`, res, (b) =>
-    buildPage(b, 'events', mapEvent, EVENT_REQUIRED, 'event')
-  )
-);
+// Which CampusHub version we call (PARTNER_VERSION), or a clear 500 if the
+// setting is wrong.
+function partnerVersion(res) {
+  try {
+    return partner.current();
+  } catch (err) {
+    console.error(err.message);
+    res
+      .status(500)
+      .json({
+        error: 'server_misconfigured',
+        message: 'Partner data unavailable',
+      });
+    return null;
+  }
+}
 
-// GET /api/clubs/events/:id -> CampusHub GET /events/{id}
-router.get('/events/:id', (req, res) =>
-  forward(`/events/${encodeURIComponent(req.params.id)}`, res, (b) => {
-    const event = b.event ?? b;
-    warnIfMissing('event', [event], EVENT_REQUIRED);
-    return mapEvent(event);
-  })
-);
+// Events first: "/events" must not be read as a club id by "/:id".
+// GET /api/clubs/events -> CampusHub GET /events (v1) or /v2/events (v2)
+router.get('/events', (req, res) => {
+  const ver = partnerVersion(res);
+  if (!ver) return;
+  return forward(
+    `${ver.eventsPath}${buildQuery(req.query, EVENT_PARAMS)}`,
+    res,
+    (b) =>
+      buildPage(
+        b,
+        'events',
+        (e) => mapEvent(ver.parseEvent(e)),
+        EVENT_REQUIRED,
+        'event'
+      )
+  );
+});
+
+// GET /api/clubs/events/:id -> CampusHub GET /events/{id} (v1) or /v2/events/{id} (v2)
+router.get('/events/:id', (req, res) => {
+  const ver = partnerVersion(res);
+  if (!ver) return;
+  return forward(
+    `${ver.eventsPath}/${encodeURIComponent(req.params.id)}`,
+    res,
+    (b) => {
+      const event = b.event ?? b;
+      warnIfMissing('event', [event], EVENT_REQUIRED);
+      return mapEvent(ver.parseEvent(event));
+    }
+  );
+});
 
 // GET /api/clubs -> CampusHub GET /clubs
 router.get('/', (req, res) =>
